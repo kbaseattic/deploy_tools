@@ -1,0 +1,207 @@
+#!/bin/sh
+
+
+#git clone ssh://kbase@git.kbase.us/dev_container
+tag="02042013-test"
+tag="latest"
+# Who am I and what service do I run
+#
+
+KB_BASE="/kb"
+KB_DEPLOY="${KB_BASE}/deployment"
+KB_DC="${KB_BASE}/dev_container"
+SERVICES="/root/services"
+MKCFG="/root/mkcfg"
+
+LOGFILE="/tmp/deploy.log"
+
+error () {
+  echo "ERROR: $@"
+  exit 1
+}
+
+# Helper function to clone a module and checkout a tag.
+clonetag () {
+  package=$1
+  mytag=$(grep ":${package}:" $SERVICES|awk -F: '{print $9}')
+  # Force to latest for now
+  mytag="latest"
+  echo "$package $mytag"
+
+  echo "- Cloning $package"
+  if [ -e ${package} ] ; then
+    cd ${package}
+    git pull
+    cd ..
+  else
+    git clone ssh://kbase@git.kbase.us/${package} > /dev/null 2>&1 || error "Git failed for ${package}"
+  fi
+  if [ ! -z "${mytag}" ] && [ "${mytag}"!="HEAD" ] ; then
+    cd $package
+    # Fix me.  Bad logic.
+    if [ "${mytag}"=="latest" ] ; then
+      mytag=$(git tag -l 2>&1|sort -n|tail -1)
+      echo " * Using $mytag for $package"
+    fi
+    git checkout "${mytag}" > /dev/null 2>&1 || error "Git checkout failed"
+    cd ..
+  fi
+}
+
+# Recursively get dependencies
+#
+getdeps () {
+  mserv=$1
+  echo "- Processing dependencies for $mserv"
+
+  DEP="${KB_DC}/modules/${mserv}/DEPENDENCIES"
+  if [ -e "$DEP" ] ; then
+    for dep in $(cat $DEP) ; do
+      if [ ! -e "${KB_DC}/modules/${dep}" ] ; then
+        clonetag ${dep}
+        getdeps $dep
+      fi
+    done
+  fi
+}
+
+# Deploy the Dev Container
+#
+deploy_devcontainer () {
+  [ -e ${KB_BASE} ] || mkdir ${KB_BASE}
+  cd ${KB_BASE}
+  clonetag dev_container
+  cd dev_container/modules
+
+  for pack in kb_seed kbapi_common typecomp auth idserver ; do
+    clonetag $pack
+  done
+  cd ${KB_DC}
+  ./bootstrap /kb/runtime/
+  . ./user-env.sh
+  echo "Running Make in dev_container"
+  make >> $LOGFILE 2>&1 || error "Make of dev_container failed"
+  echo "Running Make deploy in dev_container"
+  make deploy  >> $LOGFILE 2>&1|| error "Make deploy of dev_container failed"
+  echo "===="
+}
+
+# Start service helper function
+#
+start_service () {
+  serv=$1
+
+  spath=$(grep ":${serv}:" $SERVICES|awk -F: '{print $8}')
+  if [ -e "${KB_DEPLOY}/services/${spath}/start_service" ] ; then
+    ${KB_DEPLOY}/services/${spath}/start_service &
+  else
+    echo "No start script found in ${serv}"
+  fi
+}
+
+#
+# Figure out what service we should run
+# - Cache the answer in file named service for later reference
+#
+if [ ! -e 'service' ] ; then
+  host=$(ec2metadata --local-hostname|sed 's/\..*//'|sed 's/server-//')
+  echo "Host: $host"
+  serv=$(grep $host hostlist|awk -F: '{print $2}')
+  echo $serv > service
+else
+  serv=`cat service`
+fi
+
+[ -z "$serv" ] && exit
+echo "Service is $serv"
+
+
+# Am I just starting up the service
+if [ $# -gt 0 ] && [ "$1" = "start" ] ; then
+  start_service ${serv}
+  exit
+fi
+
+if [ $# -gt 0 ] && [ "$1" = "status" ] ; then
+  ps aux|grep $serv|grep -v grep
+  exit
+fi
+
+if [ $# -gt 0 ] && [ "$1" = "docs" ] ; then
+  for service in $(cd ${KB_DEPLOY}/services/;ls) ; do
+    rm ${KB_DEPLOY}/docs/$service
+    if [ "$service" = "cdmi_api" ] ; then
+      [ "$serv" = "kb_seed" ] && ln -s ${KB_DEPLOY}/services/$service/webroot ${KB_DEPLOY}/docs/$service
+    else
+      ln -s ${KB_DEPLOY}/services/$service/webroot ${KB_DEPLOY}/docs/$service
+    fi
+  done
+  exit
+fi
+
+# Is this deploying client only
+if [ $# -gt 0 ] && [ "$1" = "client" ]; then
+  [ -e $LOGFILE ] && rm $LOGFILE
+  deploy_devcontainer
+  cd ${KB_DC}/modules
+
+  for sv in ${serv}
+  do
+    if [ "$sv" = "clients" ]; then
+      continue
+    fi
+    clonetag ${sv}
+  done
+  cd ${KB_DC}
+  echo "Starting bootstrap at $(pwd)"
+  ./bootstrap /kb/runtime/
+  . /kb/dev_container/user-env.sh
+  echo "Running make"
+  make  >> $LOGFILE 2>&1|| error "Make failed"
+  echo "Running make deploy"
+  make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
+  ${MKCFG}
+  exit
+fi
+
+
+#if we got this far we need to shut down anything running
+if [ -e "${KB_DEPLOY}/services" ] ; then
+  for i in `ls ${KB_DEPLOY}/services`; do 
+    [ -e "${KB_DEPLOY}/services/${i}/stop_service" ] && ${KB_DEPLOY}/services/${i}/stop_service
+  done
+fi
+
+# Extingush all traces of previous deployments
+[ -e ${KB_DEPLOY} ] && rm -rf ${KB_DEPLOY}
+[ -e ${KB_DC} ] && rm -rf ${KB_DC}
+
+# Empty log file
+[ -e $LOGFILE ] && rm $LOGFILE
+
+# Compile some of the dependencies
+if [ ! -e "${KB_DEPLOY}/bin/compile_typespec" ] ; then
+  deploy_devcontainer
+fi
+
+echo "Deploying $serv"
+# Clone or update the module
+cd ${KB_DC}/modules
+clonetag ${serv} ${tag}
+# Now get any dependencies
+#
+getdeps ${serv}
+cd ${KB_DC}
+
+echo "Starting bootstrap at $(pwd)"
+./bootstrap /kb/runtime/
+. ${KB_DC}/user-env.sh
+#(cd modules/$serv;make compile-typespec)
+echo "Running make"
+make  >> $LOGFILE 2>&1|| error "Make failed"
+echo "Running make deploy"
+make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
+
+${MKCFG}
+
+start_service ${serv}

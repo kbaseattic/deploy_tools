@@ -1,0 +1,125 @@
+#!/usr/bin/perl
+
+open(L,"hostlist") or die "Unable to open hostlist";
+while(<L>){
+  chomp;
+  ($host,$git)=split /:/;
+  $git{$host}=$git if $git ne '';
+}
+
+open(L,"services") or die "Unable to open services";
+while(<L>){
+  next if /^#/;
+  chomp;
+  ($server,$stype,$service,$port,$type,$pt,$base,$servicedir)=split /:/;
+#  next unless $port>0;
+  $stype{$service}=$stype;
+  $port{$service}=$port;
+  $server{$service}=$server;
+  $type{$service}=$type;
+  $point{$service}=$pt;
+  $base{$service}=$base;
+  $servicedir{$service}=$servicedir;
+}
+
+open(T,"template") or die "Unable to open template";
+#open($new,">  /etc/nginx/sites-enabled/default");
+open($new,">  /tmp/nginix.default");
+while(<T>){
+  print $new $_;
+  printserv($new) if (/\%INCLUDE/);
+  printserv($new) if (/\%SSLINCLUDE/);
+}
+close N;
+print `service nginx restart`;
+
+sub printserv{
+  my $new=shift; 
+  foreach $s (keys %port){
+     print "Service; $s\n";
+     proxy($new,$point{$s},$server{$s},$port{$s},$base{$s},$stype{$s}) if $type{$s} eq 'proxy';
+     fastcgi($new,$point{$s},$server{$s},$port{$s},$base{$s}) if $type{$s} eq 'fastcgi';
+     docs($new,$server{$s},$servicedir{$s}) unless $type{$s} eq 'skip';
+     mkdir "/kb/docs/$stype{$s}/$s";
+     mkdir "/kb/docs/services/docs/$servicedir{$s}";
+  }
+#  foreach $h (keys %git){
+#     $git=$git{$h};
+#     mkdir "/kb/docs/services/docs/$git";
+#     docs($new,$h,$git);
+#  }
+}
+
+sub proxy {
+  my $fh=shift;
+  my $service=shift;
+  my $server=shift;
+  my $port=shift;
+  my $base=shift;
+  my $stype=shift;
+
+
+     print $fh " location /$stype/$service {\n";
+     print $fh "            if (\$request_method = OPTIONS ) {\n";
+     print $fh "                add_header Access-Control-Allow-Origin \$http_origin;\n";
+     print $fh "                add_header Access-Control-Allow-Methods \$http_access_control_request_methods;\n";
+     print $fh "                add_header Access-Control-Allow-Headers \$http_access_control_request_headers;\n";
+     print $fh "                add_header Access-Control-Expose-Headers \$http_access_control_request_headers;\n";
+     print $fh "                add_header Access-Control-Allow-Credentials \"true\";\n";
+     print $fh "                add_header Content-Length 0;\n";
+     print $fh "                add_header Content-Type text/plain;\n";
+     print $fh "                return 200;\n";
+     print $fh "            }\n";
+     print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n";
+     print $fh "            proxy_pass http://$server:$port/$base;\n";
+     print $fh "        }\n";
+    
+}
+
+sub fastcgi {
+  my $fh=shift;
+  my $service=shift;
+  my $server=shift;
+  my $port=shift;
+  my $base=shift;
+  print $fh "      location /services/$service {\n";
+  print $fh "                        location /services/$service/ {\n";
+  print $fh "                        # host and port to fastcgi server\n";
+  print $fh "                        rewrite /services/$service(.*) \$1 break;\n";
+  print $fh "                        fastcgi_pass $server:$port;\n";
+  print $fh "                        fastcgi_param PATH_INFO \$fastcgi_script_name;\n";
+  print $fh "                        fastcgi_param REQUEST_METHOD \$request_method;\n";
+  print $fh "                        fastcgi_param QUERY_STRING \$query_string;\n";
+  print $fh "                        fastcgi_param CONTENT_TYPE \$content_type;\n";
+  print $fh "                        fastcgi_param CONTENT_LENGTH \$content_length;\n";
+  print $fh "                        fastcgi_param SERVER_NAME \$server_name;\n";
+  print $fh "                        fastcgi_param SERVER_PORT \$server_port;\n";
+  print $fh "                        fastcgi_param SERVER_PROTOCOL \$server_port;\n";
+  print $fh "                        fastcgi_pass_header Authorization;\n";
+  print $fh "                        fastcgi_intercept_errors off;\n";
+  print $fh "                        fastcgi_param REMOTE_ADDR \$remote_addr;\n";
+  print $fh "                        }\n";
+  print $fh "      }\n";
+}
+
+sub docs {
+  my $fh=shift;
+  my $server=shift;
+  my $servicedir=shift;
+
+     print $fh " location /services/docs/$servicedir {\n";
+     print $fh "            if (\$request_method = OPTIONS ) {\n";
+     print $fh "                add_header Access-Control-Allow-Origin \$http_origin;\n";
+     print $fh "                add_header Access-Control-Allow-Methods \$http_access_control_request_methods;\n";
+     print $fh "                add_header Access-Control-Allow-Headers \$http_access_control_request_headers;\n";
+     print $fh "                add_header Access-Control-Expose-Headers \$http_access_control_request_headers;\n";
+     print $fh "                add_header Access-Control-Allow-Credentials \"true\";\n";
+     print $fh "                add_header Content-Length 0;\n";
+     print $fh "                add_header Content-Type text/plain;\n";
+     print $fh "                return 200;\n";
+     print $fh "            }\n";
+     print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n";
+     print $fh "            proxy_pass http://$server/$servicedir;\n";
+     print $fh "        }\n";
+
+}

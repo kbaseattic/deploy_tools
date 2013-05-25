@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+open(L,"hostlist") or die "Unable to open hostlist";
+while(<L>){
+  chomp;
+  ($host,$serv)=split /:/;
+  $ct=$host;
+  $ct=~s/t//; 
+  $max=$ct if ($ct>$max);
+  $serv{$host}=$serv;
+}
+
+$ct=1;
+print `cp /etc/hosts /etc/hosts.bk`;
+
+open(H,'/etc/hosts.bk') or die "Unable to open hosts";
+open(HN,"> /etc/hosts.new") or die "Unable to open new hosts";
+while(<H>){
+  if (/ t/){
+    chomp;
+    ($ip,$host)=split;
+    print HN "$ip $host $serv{$host}\n" ;
+    $ct++;
+    $added{$host}=1;
+  }
+  else{
+   print HN;
+  }
+}
+
+for ($i=0;$i<$max;$i++){
+  $host=sprintf "t%d",$i;
+  next if defined $added{$host};
+  next if ! defined $serv{$host};
+  $ip=`host $host |sed 's/.*address //'`;
+  chomp $ip;
+  print HN "$ip $host $serv{$host}\n" ;
+}
+close HN;

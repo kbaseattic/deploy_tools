@@ -1,0 +1,48 @@
+#!/usr/bin/perl -w
+#
+#  Gather deployment configuration files on a single host and
+#  cat into /kb/deployment/deployment.cfg
+#
+#  20130205 SAM
+#
+#  source files are in /kb/dev_container/modules/*/deploy.cfg
+#  and cat them into a single deployment configuration file
+#
+#
+use strict;		# require all vars to be declared
+use POSIX qw(strftime);
+#
+# get list of files
+#
+open (FILES, "/usr/bin/find /kb/dev_container/modules -name deploy.cfg -print |") 
+   or die "unable to execute find command: $!\n";
+#
+# open output file, write header
+#
+my $outfile = "/kb/deployment/deployment.cfg";
+open (OUT, ">$outfile") or die "unable to open $outfile for write: $!\n";
+print OUT "#\n";
+print OUT "#  Concatenated config file created by /root/mkcfg on ";
+print OUT strftime("%a, %d %b %Y %H:%M:%S %z", localtime(time())) . "\n";
+print OUT "#\n";
+#
+# start cat-ing them
+#
+while (<FILES>) {
+   chop;
+   my $filename = $_;
+   open (IN, "<$filename") or die "Unable to open $filename: $!\n";
+   print OUT "#----------------------------------------------------------------------\n";
+   print OUT "# content from $filename\n";
+   my $mtime = (stat($filename))[10];
+   print OUT  "# last modified " . 
+      strftime("%a, %d %b %Y %H:%M:%S %z", localtime($mtime)) . "\n";
+   print OUT "#\n";
+   while (<IN>) {
+       print OUT $_;
+   }
+   close (IN);
+}
+close(FILES);
+print OUT "#\n# (end of file)\n";
+close(OUT);

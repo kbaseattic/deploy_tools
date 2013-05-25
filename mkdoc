@@ -1,0 +1,7 @@
+#!/bin/sh
+
+mkdir /kb/deployment/docs
+for i in `ls /kb/deployment/services/`; do
+  ln -s /kb/deployment/services/${i}/webroot /kb/deployment/docs/${i}
+done
+
