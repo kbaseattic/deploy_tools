@@ -11,6 +11,8 @@ KB_BASE="/kb"
 KB_DEPLOY="${KB_BASE}/deployment"
 KB_DC="${KB_BASE}/dev_container"
 SERVICES="/root/services"
+
+DEFCFG="/root/deployment.cfg"
 MKCFG="/root/mkcfg"
 
 LOGFILE="/tmp/deploy.log"
@@ -25,7 +27,7 @@ clonetag () {
   package=$1
   mytag=$(grep ":${package}:" $SERVICES|awk -F: '{print $9}')
   # Force to latest for now
-  mytag="latest"
+  #mytag="latest"
   echo "$package $mytag"
 
   echo "- Cloning $package"
@@ -202,6 +204,10 @@ make  >> $LOGFILE 2>&1|| error "Make failed"
 echo "Running make deploy"
 make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
 
-${MKCFG}
+if [ -e "$DEFCFG" ] ; then
+  /bin/cp ${DEFCFG} ${KB_DEPLOY}
+else
+  ${MKCFG}
+fi
 
 start_service ${serv}
