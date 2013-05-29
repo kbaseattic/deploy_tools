@@ -175,7 +175,7 @@ if [ -e "${KB_DEPLOY}/services" ] ; then
 fi
 
 # Extingush all traces of previous deployments
-[ -e ${KB_DEPLOY} ] && rm -rf ${KB_DEPLOY}
+[ -e ${KB_DEPLOY} ] && mv ${KB_DEPLOY} ${KB_DEPLOY}.$(date +%s)
 [ -e ${KB_DC} ] && rm -rf ${KB_DC}
 
 # Empty log file
