@@ -129,6 +129,20 @@ if [ $# -gt 0 ] && [ "$1" = "status" ] ; then
   exit
 fi
 
+if [ $# -gt 0 ] && [ "$1" = "mongo" ] ; then
+  [ -e "/data" ] || mkdir /data
+  if [ $(df |grep -c /mnt) -gt 0 ] ; then
+    echo "Using /mnt for mongo"
+    [ -e "/mnt/db" ] || mkdir /mnt/db 
+    [ -e "/data/db" ] || ln -s /mnt/db /data
+  else
+    [ -e "/data/db" ] || mkdir /data/db 
+  fi
+  echo "Starting MongoDB"
+  /kb/runtime/bin/mongod --dbpath /data/db
+  exit
+fi
+
 if [ $# -gt 0 ] && [ "$1" = "docs" ] ; then
   for service in $(cd ${KB_DEPLOY}/services/;ls) ; do
     rm ${KB_DEPLOY}/docs/$service
