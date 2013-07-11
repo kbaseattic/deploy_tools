@@ -10,6 +10,7 @@ tag="latest"
 KB_BASE="/kb"
 KB_DEPLOY="${KB_BASE}/deployment"
 KB_DC="${KB_BASE}/dev_container"
+KB_RT="${KB_BASE}/runtime"
 SERVICES="/root/services"
 
 DEFCFG="/root/deployment.cfg"
@@ -81,7 +82,7 @@ deploy_devcontainer () {
     clonetag $pack
   done
   cd ${KB_DC}
-  ./bootstrap /kb/runtime/
+  ./bootstrap ${KB_RT}
   . ./user-env.sh
   echo "Running Make in dev_container"
   make >> $LOGFILE 2>&1 || error "Make of dev_container failed"
@@ -103,13 +104,15 @@ hotfix () {
     exit -1
   fi
 
-  cd ${KB_DC}/modules
+  cd ${KB_DC}
+  . ./user-env.sh
+  cd modules
   for tserv in $* ; do
     if [ -e "$KB_DC/modules/$tserv" ] ; then
       echo "Hotfixing $tserv"
       clonetag $tserv
       cd $tserv
-      make deploy
+      make deploy  >> $LOGFILE 2>&1|| error "Make deploy of ${tserv} failed"
     fi
   done
   exit
