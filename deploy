@@ -105,58 +105,56 @@ start_service () {
 # Figure out what service we should run
 # - Cache the answer in file named service for later reference
 #
-if [ ! -e 'service' ] ; then
-  host=$(ec2metadata --local-hostname|sed 's/\..*//'|sed 's/server-//')
-  echo "Host: $host"
-  serv=$(grep $host hostlist|awk -F: '{print $2}')
-  echo $serv > service
-else
-  serv=`cat service`
-fi
+find_service () {
+    if [ ! -e 'service' ] ; then
+      host=$(hostname)
+      if [ $(grep -c $host hostlist) -eq 0 ] ; then
+        host=$(ec2metadata --local-hostname|sed 's/\..*//'|sed 's/server-//')
+      fi
+      echo "Host: $host"
+      serv=$(grep $host hostlist|awk -F: '{print $2}')
+      echo $serv > service
+    else
+      serv=`cat service`
+    fi
+    if [ -z "$serv" ] ; then
+      echo "Unable to determine service"
+      exit -1
+    fi
+    echo "Service is $serv"
+}
 
-[ -z "$serv" ] && exit
-echo "Service is $serv"
 
+# Init Mongo
+# TODO: Make this variables
+#
+mongo_init () {
+    [ -e "/data" ] || mkdir /data
+    if [ $(df |grep -c /mnt) -gt 0 ] ; then
+      echo "Using /mnt for mongo"
+      [ -e "/mnt/db" ] || mkdir /mnt/db 
+      [ -e "/data/db" ] || ln -s /mnt/db /data
+    else
+      [ -e "/data/db" ] || mkdir /data/db 
+    fi
+    echo "Starting MongoDB"
+    /kb/runtime/bin/mongod --dbpath /data/db
+}
 
-# Am I just starting up the service
-if [ $# -gt 0 ] && [ "$1" = "start" ] ; then
-  start_service ${serv}
-  exit
-fi
-
-if [ $# -gt 0 ] && [ "$1" = "status" ] ; then
-  ps aux|grep $serv|grep -v grep
-  exit
-fi
-
-if [ $# -gt 0 ] && [ "$1" = "mongo" ] ; then
-  [ -e "/data" ] || mkdir /data
-  if [ $(df |grep -c /mnt) -gt 0 ] ; then
-    echo "Using /mnt for mongo"
-    [ -e "/mnt/db" ] || mkdir /mnt/db 
-    [ -e "/data/db" ] || ln -s /mnt/db /data
-  else
-    [ -e "/data/db" ] || mkdir /data/db 
-  fi
-  echo "Starting MongoDB"
-  /kb/runtime/bin/mongod --dbpath /data/db
-  exit
-fi
-
-if [ $# -gt 0 ] && [ "$1" = "docs" ] ; then
+docs_init () {
   for service in $(cd ${KB_DEPLOY}/services/;ls) ; do
     rm ${KB_DEPLOY}/docs/$service
+    # Special exception for cdmi.  Yuck!
     if [ "$service" = "cdmi_api" ] ; then
       [ "$serv" = "kb_seed" ] && ln -s ${KB_DEPLOY}/services/$service/webroot ${KB_DEPLOY}/docs/$service
     else
       ln -s ${KB_DEPLOY}/services/$service/webroot ${KB_DEPLOY}/docs/$service
     fi
   done
-  exit
-fi
+}
 
 # Is this deploying client only
-if [ $# -gt 0 ] && [ "$1" = "client" ]; then
+client_host () {
   [ -e $LOGFILE ] && rm $LOGFILE
   deploy_devcontainer
   cd ${KB_DC}/modules
@@ -177,51 +175,96 @@ if [ $# -gt 0 ] && [ "$1" = "client" ]; then
   echo "Running make deploy"
   make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
   ${MKCFG}
-  exit
-fi
+}
 
-
-#if we got this far we need to shut down anything running
-if [ -e "${KB_DEPLOY}/services" ] ; then
-  for i in `ls ${KB_DEPLOY}/services`; do 
-    [ -e "${KB_DEPLOY}/services/${i}/stop_service" ] && ${KB_DEPLOY}/services/${i}/stop_service
-  done
-fi
-
-# Extingush all traces of previous deployments
-[ -e ${KB_DEPLOY} ] && mv ${KB_DEPLOY} ${KB_DEPLOY}.$(date +%s)
-[ -e ${KB_DC} ] && rm -rf ${KB_DC}
-
-# Empty log file
-[ -e $LOGFILE ] && rm $LOGFILE
-
-# Compile some of the dependencies
-if [ ! -e "${KB_DEPLOY}/bin/compile_typespec" ] ; then
-  deploy_devcontainer
-fi
-
-echo "Deploying $serv"
-# Clone or update the module
-cd ${KB_DC}/modules
-clonetag ${serv} ${tag}
-# Now get any dependencies
+# Stop Services
+# TODO: This shouldn't be a "wild" card approach
 #
-getdeps ${serv}
-cd ${KB_DC}
+stop_service () {
+  if [ -e "${KB_DEPLOY}/services" ] ; then
+    for i in `ls ${KB_DEPLOY}/services`; do 
+      [ -e "${KB_DEPLOY}/services/${i}/stop_service" ] && ${KB_DEPLOY}/services/${i}/stop_service
+    done
+  fi
+}
 
-echo "Starting bootstrap at $(pwd)"
-./bootstrap /kb/runtime/
-. ${KB_DC}/user-env.sh
-#(cd modules/$serv;make compile-typespec)
-echo "Running make"
-make  >> $LOGFILE 2>&1|| error "Make failed"
-echo "Running make deploy"
-make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
 
-if [ -e "$DEFCFG" ] ; then
-  /bin/cp ${DEFCFG} ${KB_DEPLOY}
-else
-  ${MKCFG}
-fi
+deploy_service () {
 
-start_service ${serv}
+  # Try to autodetect the client host
+  #
+  if [ $(echo $serv|grep -c clients) -gt 0 ] ; then
+    echo "Client host detected."
+    client_host
+    return
+  fi
+
+  stop_service
+
+  # Extingush all traces of previous deployments
+  [ -e ${KB_DEPLOY} ] && mv ${KB_DEPLOY} ${KB_DEPLOY}.$(date +%s)
+  [ -e ${KB_DC} ] && rm -rf ${KB_DC}
+
+  # Empty log file
+  [ -e $LOGFILE ] && rm $LOGFILE
+
+  # Create the dev container and some common dependencies
+  if [ ! -e "${KB_DEPLOY}/bin/compile_typespec" ] ; then
+    deploy_devcontainer
+  fi
+
+  echo "Deploying $serv"
+  # Clone or update the module
+  cd ${KB_DC}/modules
+  clonetag ${serv} ${tag}
+ 
+  # Now get any dependencies
+  getdeps ${serv}
+  cd ${KB_DC}
+
+  echo "Starting bootstrap at $(pwd)"
+  ./bootstrap /kb/runtime/
+  . ${KB_DC}/user-env.sh
+
+  echo "Running make"
+  make  >> $LOGFILE 2>&1|| error "Make failed"
+  echo "Running make deploy"
+  make deploy  >> $LOGFILE 2>&1|| error "Make deploy failed"
+
+  # Copy the deployment config from the reference copy
+  if [ -e "$DEFCFG" ] ; then
+    /bin/cp ${DEFCFG} ${KB_DEPLOY}
+  else
+    ${MKCFG}
+  fi
+
+  start_service ${serv}
+}
+
+
+find_service
+
+case "$1" in
+	start)
+		start_service ${serv}
+                ;;
+        stop)
+		stop_service ${serv}
+                ;;
+        mongo)
+		mongo_init
+                ;;
+        docs)
+		docs_init
+                ;;
+        client)
+		client_host
+                ;;
+        status)
+		ps aux|grep $serv|grep -v grep
+                ;;
+        *)
+                echo $"Usage: $0 {start|stop|docs|mongo|status}"
+                RETVAL=2
+esac
+exit $RETVAL
