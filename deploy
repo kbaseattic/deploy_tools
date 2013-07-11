@@ -33,7 +33,9 @@ clonetag () {
   echo "- Cloning $package"
   if [ -e ${package} ] ; then
     cd ${package}
-    git pull
+    # Make sure we are on head
+    git checkout master > /dev/null 2>&1 || error "Failed to switch to master for ${package}"
+    git pull > /dev/null 2>&1 || error "Git pull failed for ${package}"
     cd ..
   else
     git clone ssh://kbase@git.kbase.us/${package} > /dev/null 2>&1 || error "Git failed for ${package}"
@@ -86,6 +88,31 @@ deploy_devcontainer () {
   echo "Running Make deploy in dev_container"
   make deploy  >> $LOGFILE 2>&1|| error "Make deploy of dev_container failed"
   echo "===="
+}
+
+# Hot fix
+hotfix () {
+  # Let's do some quick tests
+  if [ ! -e "${KB_DEPLOY}" ] ; then
+    echo "No deployment found to hotfix."
+    exit -1
+  fi
+
+  if [ ! -e "${KB_DC}" ] ; then
+    echo "No dev_container found to hotfix from."
+    exit -1
+  fi
+
+  cd ${KB_DC}/modules
+  for tserv in $* ; do
+    if [ -e "$KB_DC/modules/$tserv" ] ; then
+      echo "Hotfixing $tserv"
+      clonetag $tserv
+      cd $tserv
+      make deploy
+    fi
+  done
+  exit
 }
 
 # Start service helper function
@@ -257,6 +284,14 @@ case "$1" in
         docs)
 		docs_init
                 ;;
+        deploy)
+		deploy_service
+                ;;
+	hotfix)
+		# Hotfix requires additional args
+		shift
+		hotfix $*
+		;;
         client)
 		client_host
                 ;;

@@ -23,6 +23,7 @@ t23:services:translation:7061:proxy:translation::translation:20130514-test:
 t24:services:trees:7047:proxy:trees::trees:20130513-test:
 t25:services:workspace_service:7058:proxy:workspace::workspaceService:20130527-iris_prod:
 t26:services:erdb_service:7099:proxy:erdb_service::erdb_service:20130513-test:
+t2:client:auth:::::auth:20130711-hf-prod:
 t2:client:matR:::::matR:20130514-test:
 t2:client:assembly:::::assembly:20130514-test:
 t2:client:communities_api:::::communities_api:20130514-test:
