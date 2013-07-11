@@ -11,12 +11,16 @@ KB_BASE="/kb"
 KB_DEPLOY="${KB_BASE}/deployment"
 KB_DC="${KB_BASE}/dev_container"
 KB_RT="${KB_BASE}/runtime"
+
 SERVICES="/root/services"
+HOSTLIST="/root/hostlist"
 
 DEFCFG="/root/deployment.cfg"
 MKCFG="/root/mkcfg"
 
 LOGFILE="/tmp/deploy.log"
+
+MONGODB="/data/db"
 
 error () {
   echo "ERROR: $@"
@@ -138,11 +142,11 @@ start_service () {
 find_service () {
     if [ ! -e 'service' ] ; then
       host=$(hostname)
-      if [ $(grep -c $host hostlist) -eq 0 ] ; then
+      if [ $(grep -c $host $HOSTLIST) -eq 0 ] ; then
         host=$(ec2metadata --local-hostname|sed 's/\..*//'|sed 's/server-//')
       fi
       echo "Host: $host"
-      serv=$(grep $host hostlist|awk -F: '{print $2}')
+      serv=$(grep $host $HOSTLIST|awk -F: '{print $2}')
       echo $serv > service
     else
       serv=`cat service`
@@ -156,19 +160,19 @@ find_service () {
 
 
 # Init Mongo
-# TODO: Make this variables
 #
 mongo_init () {
-    [ -e "/data" ] || mkdir /data
+    MONGO_BASE=$(dirname ${MONGODB})
+    [ -e "$MONGO_BASE" ] || mkdir $MONGO_BASE
     if [ $(df |grep -c /mnt) -gt 0 ] ; then
       echo "Using /mnt for mongo"
       [ -e "/mnt/db" ] || mkdir /mnt/db 
-      [ -e "/data/db" ] || ln -s /mnt/db /data
+      [ -e "$MONGODB" ] || ln -s /mnt/db $MONGODB
     else
-      [ -e "/data/db" ] || mkdir /data/db 
+      [ -e "$MONGODB" ] || mkdir $MONGODB
     fi
     echo "Starting MongoDB"
-    /kb/runtime/bin/mongod --dbpath /data/db
+    /kb/runtime/bin/mongod --dbpath $MONGODB
 }
 
 docs_init () {
@@ -208,14 +212,10 @@ client_host () {
 }
 
 # Stop Services
-# TODO: This shouldn't be a "wild" card approach
 #
 stop_service () {
-  if [ -e "${KB_DEPLOY}/services" ] ; then
-    for i in `ls ${KB_DEPLOY}/services`; do 
-      [ -e "${KB_DEPLOY}/services/${i}/stop_service" ] && ${KB_DEPLOY}/services/${i}/stop_service
-    done
-  fi
+  serv=$1
+  [ -e "${KB_DEPLOY}/services/${serv}/stop_service" ] && ${KB_DEPLOY}/services/${serv}/stop_service
 }
 
 
@@ -281,6 +281,10 @@ case "$1" in
         stop)
 		stop_service ${serv}
                 ;;
+        restart)
+		stop_service ${serv}
+		start_service ${serv}
+                ;;
         mongo)
 		mongo_init
                 ;;
@@ -302,7 +306,7 @@ case "$1" in
 		ps aux|grep $serv|grep -v grep
                 ;;
         *)
-                echo $"Usage: $0 {start|stop|docs|mongo|status}"
+                echo $"Usage: $0 {start|stop|restart|deploy|docs|mongo|client|status}"
                 RETVAL=2
 esac
 exit $RETVAL
