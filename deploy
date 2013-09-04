@@ -216,7 +216,7 @@ client_host () {
 #
 stop_service () {
   mserv=$1
-  [ -e "${KB_DEPLOY}/services/${mserv}/stop_service" ] && ${KB_DEPLOY}/services/${mserv}/stop_serviceh
+  [ -e "${KB_DEPLOY}/services/${mserv}/stop_service" ] && ${KB_DEPLOY}/services/${mserv}/stop_service
 }
 
 
