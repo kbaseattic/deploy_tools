@@ -1,18 +1,14 @@
 #!/bin/sh
 
-
-#git clone ssh://kbase@git.kbase.us/dev_container
-tag="02042013-test"
-tag="latest"
-# Who am I and what service do I run
-#
-
+# Defaults and paths
 KB_BASE="/kb"
 KB_DEPLOY="${KB_BASE}/deployment"
 KB_DC="${KB_BASE}/dev_container"
 KB_RT="${KB_BASE}/runtime"
 
-SERVICES="/root/services"
+if [ -z ${SERVICES} ] ; then
+  SERVICES="/root/services"
+fi
 HOSTLIST="/root/hostlist"
 
 DEFCFG="/root/deployment.cfg"
@@ -21,6 +17,12 @@ MKCFG="/root/mkcfg"
 LOGFILE="/tmp/deploy.log"
 
 MONGODB="/data/db"
+
+#if this is a bleeding edge deploy, ignore any errors        
+#FIXME: May want to handle this another way
+if [ $(hostname) = "kbase-KVM" ]; then
+  MAKE_OPTIONS="${MAKE_OPTIONS} --ignore-errors"
+fi
 
 error () {
   echo "ERROR: $@"
@@ -89,9 +91,10 @@ deploy_devcontainer () {
   ./bootstrap ${KB_RT}
   . ./user-env.sh
   echo "Running Make in dev_container"
-  make >> $LOGFILE 2>&1 || error "Make of dev_container failed"
-  echo "Running Make deploy in dev_container"
-  make deploy  >> $LOGFILE 2>&1|| error "Make deploy of dev_container failed"
+  make ${MAKE_OPTIONS} >> $LOGFILE 2>&1
+
+  echo "Running make deploy"
+  make deploy ${MAKE_OPTIONS} >> $LOGFILE 2>&1
   echo "===="
 }
 
@@ -193,7 +196,7 @@ client_host () {
   deploy_devcontainer
   cd ${KB_DC}/modules
 
-  for sv in ${serv}
+  for sv in $(cat $SERVICES | grep $(hostname) | awk -F: '{print $3}')
   do
     if [ "$sv" = "clients" ]; then
       continue
