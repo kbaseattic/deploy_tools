@@ -33,8 +33,6 @@ error () {
 clonetag () {
   package=$1
   mytag=$(grep ":${package}:" $SERVICES|awk -F: '{print $9}')
-  # Force to latest for now
-  #mytag="latest"
   echo "$package $mytag"
 
   echo "- Cloning $package"
@@ -50,9 +48,9 @@ clonetag () {
   if [ ! -z "${mytag}" ] && [ "${mytag}"!="HEAD" ] ; then
     cd $package
     # Fix me.  Bad logic.
-    if [ "${mytag}"=="latest" ] ; then
+    if [ "${mytag}" = "latest" ] ; then
       mytag=$(git tag -l 2>&1|sort -n|tail -1)
-      echo " * Using $mytag for $package"
+      echo " * Using latest tag $mytag for $package"
     fi
     git checkout "${mytag}" > /dev/null 2>&1 || error "Git checkout failed"
     cd ..
@@ -128,9 +126,9 @@ hotfix () {
 # Start service helper function
 #
 start_service () {
-  serv=$1
+  mserv=$1
 
-  spath=$(grep ":${serv}:" $SERVICES|awk -F: '{print $8}')
+  spath=$(grep ":${mserv}:" $SERVICES|awk -F: '{print $8}')
   if [ -e "${KB_DEPLOY}/services/${spath}/start_service" ] ; then
     ${KB_DEPLOY}/services/${spath}/start_service &
   else
@@ -217,8 +215,8 @@ client_host () {
 # Stop Services
 #
 stop_service () {
-  serv=$1
-  [ -e "${KB_DEPLOY}/services/${serv}/stop_service" ] && ${KB_DEPLOY}/services/${serv}/stop_service
+  mserv=$1
+  [ -e "${KB_DEPLOY}/services/${mserv}/stop_service" ] && ${KB_DEPLOY}/services/${mserv}/stop_serviceh
 }
 
 
