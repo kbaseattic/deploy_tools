@@ -82,7 +82,7 @@ deploy_devcontainer () {
   clonetag dev_container
   cd dev_container/modules
 
-  for pack in kb_seed kbapi_common typecomp auth idserver ; do
+  for pack in kb_seed kbapi_common typecomp jars auth idserver ; do
     clonetag $pack
   done
   cd ${KB_DC}
