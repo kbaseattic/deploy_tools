@@ -1,0 +1,51 @@
+p0:KBaseFBAModeling
+p1:kbase.us
+p2:clients communities_api matR assembly aux_store
+p3:auth_service
+p4:cluster_service
+p5:communities_qc
+p6:experiment
+p7:feature_selection
+p8:file_type_service
+p9:genome_annotation
+p10:genotype_phenotype_api
+p11:idserver
+p12:invocation
+p13:kb_seed
+p14:networks
+p15:
+p16:
+p17:
+p18:
+p19:
+p20:
+p21:
+p22:
+p23:
+p24:
+p25:
+p26:
+p27:
+p28:
+p29:
+p30:
+p31:
+p32:
+p33:
+p34:
+p35:
+p36:
+p37:	ontology_service
+p38:	phispy
+p39:	plant_expression_service
+p40:	probabilistic_annotation
+p41:	prom_service
+p42:	protein_info_service
+p43:	regprecise
+p44:	sim_service
+p45:	translation
+p46:	trees
+p47:	workspace_service
+p48:	erdb_service
+p49:	registry
+p50:	m5nr
