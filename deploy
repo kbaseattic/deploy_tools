@@ -9,7 +9,6 @@ KB_RT="${KB_BASE}/runtime"
 if [ -z ${SERVICES} ] ; then
   SERVICES="/root/services"
 fi
-HOSTLIST="/root/hostlist"
 
 DEFCFG="/root/deployment.cfg"
 MKCFG="/root/mkcfg"
@@ -143,11 +142,11 @@ start_service () {
 find_service () {
     if [ ! -e 'service' ] ; then
       host=$(hostname)
-      if [ $(grep -c $host $HOSTLIST) -eq 0 ] ; then
+      if [ $(grep -c "$host:" $SERVICES) -eq 0 ] ; then
         host=$(ec2metadata --local-hostname|sed 's/\..*//'|sed 's/server-//')
       fi
       echo "Host: $host"
-      serv=$(grep $host $HOSTLIST|awk -F: '{print $2}')
+      serv=$(grep "$host:" $SERVICES|awk -F: '{print $3}')
       echo $serv > service
     else
       serv=`cat service`
