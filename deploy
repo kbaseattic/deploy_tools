@@ -83,7 +83,7 @@ deploy_devcontainer () {
   clonetag dev_container
   cd dev_container/modules
 
-  for pack in kb_seed kbapi_common typecomp jars auth idserver ; do
+  for pack in kbapi_common typecomp jars auth ; do
     clonetag $pack
   done
   cd ${KB_DC}
@@ -127,14 +127,14 @@ hotfix () {
 # Start service helper function
 #
 start_service () {
-  mserv=$1
-
-  spath=$(grep ":${mserv}:" $SERVICES|awk -F: '{print $8}')
-  if [ -e "${KB_DEPLOY}/services/${spath}/start_service" ] ; then
-    ${KB_DEPLOY}/services/${spath}/start_service &
-  else
-    echo "No start script found in ${serv}"
-  fi
+  for mserv in $* ; do
+    spath=$(grep ":${mserv}:" $SERVICES|awk -F: '{print $8}')
+    if [ -e "${KB_DEPLOY}/services/${spath}/start_service" ] ; then
+      ${KB_DEPLOY}/services/${spath}/start_service &
+    else
+      echo "No start script found in ${mserv}"
+    fi
+  done
 }
 
 #
@@ -216,8 +216,9 @@ client_host () {
 # Stop Services
 #
 stop_service () {
-  mserv=$1
-  [ -e "${KB_DEPLOY}/services/${mserv}/stop_service" ] && ${KB_DEPLOY}/services/${mserv}/stop_service
+  for mserv in $* ; do
+    [ -e "${KB_DEPLOY}/services/${mserv}/stop_service" ] && ${KB_DEPLOY}/services/${mserv}/stop_service
+  done
 }
 
 
@@ -225,7 +226,7 @@ deploy_service () {
 
   # Try to autodetect the client host
   #
-  if [ $(echo $serv|grep -c clients) -gt 0 ] ; then
+  if [ $(echo $@|grep -c clients) -gt 0 ] ; then
     echo "Client host detected."
     client_host
     return
@@ -245,13 +246,15 @@ deploy_service () {
     deploy_devcontainer
   fi
 
-  echo "Deploying $serv"
-  # Clone or update the module
   cd ${KB_DC}/modules
-  clonetag ${serv} ${tag}
+  for mserv in $(echo $@) ; do
+    echo "Deploying $mserv"
+    # Clone or update the module
+    clonetag ${mserv} ${tag}
+    # Now get any dependencies
+    getdeps ${mserv}
+  done
  
-  # Now get any dependencies
-  getdeps ${serv}
   cd ${KB_DC}
 
   echo "Starting bootstrap at $(pwd)"
@@ -270,7 +273,7 @@ deploy_service () {
     ${MKCFG}
   fi
 
-  start_service ${serv}
+  start_service $@
 }
 
 
@@ -294,7 +297,7 @@ case "$1" in
 		docs_init
                 ;;
         deploy)
-		deploy_service
+		deploy_service ${serv}
                 ;;
 	hotfix)
 		# Hotfix requires additional args
