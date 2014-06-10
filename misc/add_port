@@ -1,0 +1,45 @@
+#!/usr/bin/env perl 
+
+use lib './perl';
+use Config::IniFiles;
+use Switch;
+
+my $debug=0;
+
+my $cfgfile="./cluster.ini";
+
+my $cfg = new Config::IniFiles( -file => $cfgfile) or die "Unable to open cluster.ini".@Config::IniFiles::errors[0];
+
+for ($cfg->Sections()){
+  push @services,$_ if $_ ne $globaltag;
+  $inini{$_}=1;
+}
+
+open(S,"$ARGV[0]");
+
+while(<S>){
+ #p8:services:file_type_service:7060:proxy:file_type_service::file_type_service:20131010-prod:
+ next if /#/;
+ ($server,$stype,$service,$port,$type,$pt,$base,$servicedir)=split /:/;
+ next if $stype ne 'services';
+ if ( defined $inini{$servicedir} ){
+   $serv=$servicedir;
+ }
+ elsif ( defined $inini{$pt} ){
+   $serv=$pt;
+ }
+ elsif ( defined $inini{$service} ){
+   $serv=$service;
+ }
+ else {
+   print "Missing $service\n";
+   next;
+ }
+ print "Service $serv\n";
+ $cfg->newval($serv,'port',$port) if (! defined $cfg->val($serv,'port'));
+ $cfg->newval($serv,'repo',$service) if (($service ne $serv) && ! defined $cfg->val($serv,'repo'));
+ $cfg->newval($serv,'urlname',$pt) if (($pt ne $serv) && ! defined $cfg->val($serv,'urlname'));
+ $cfg->newval($serv,'basedir',$servicedir) if (($servicedir ne $serv) && ! defined $cfg->val($serv,'basedir'));
+}
+
+$cfg->WriteConfig('cluster.ini.new');

@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+my $F=$ARGV[1];
+
+# Get the current list
+open(O,$F) or die "Unable to open services file\n";
+while(<O>){
+#  p0:services:KBaseFBAModeling:7036:proxy:KBaseFBAModeling::fbaModelServices:20130904-prod: 
+   @items=split /:/;
+   $configured{$items[2]}=1;
+   push @list,$_;
+}
+
+# Get the new versions
+open(V,$ARGV[0]) or die "Unable to open version file\n";
+while(<V>){
+#  p0:services:KBaseFBAModeling:7036:proxy:KBaseFBAModeling::fbaModelServices:20130904-prod: 
+   ($h,$t,$n,$p,$pt,$git,$huh,$ns,$ver)=split /:/;
+   $ver{$n}=$ver;
+   if (! defined $configured{$n}){
+     print STDERR "Warning: $n not confiugred\n";
+   }
+   
+}
+close V;
+
+my $time=time();
+system("cp $F $F.$time");
+open(N,">$F");
+foreach (@list){
+   @items=split /:/;
+   $items[8]=$ver{$items[2]};
+   $str=join(':',@items);
+   print N $str;
+}
+close N;
