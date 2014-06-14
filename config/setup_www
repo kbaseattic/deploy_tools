@@ -1,3 +1,97 @@
-#!/bin/sh
+#!/usr/bin/env perl 
 
-echo "TBD"
+use lib '../perl';
+use Data::Dumper;
+use KBDeploy;
+use strict;
+
+my $debug=0;
+
+my $cfgfile="../cluster.ini";
+my $basedir="/root/dt";
+my $gtag='global';
+
+my $cfg=read_config($cfgfile,$gtag);
+
+mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
+mysystem("[ -e /usr/sbin/nginx ] || apt-get -y install nginx");
+
+open(T,"./nginx.tmpl") or die "Unable to open template";
+open(my $new,">  /etc/nginx/sites-enabled/default") or die "Unable to open nginx file";
+#open(my $new,">  /tmp/default");
+while(<T>){
+  print $new $_;
+  printserv($new,0) if (/\%INCLUDE/);
+  printserv($new,1) if (/\%SSLINCLUDE/);
+}
+close N;
+#print `service nginx restart`;
+
+sub printserv{
+  my $new=shift; 
+  my $ssl=shift; 
+  foreach my $s (@{$cfg->{servicelist}}){
+     my $sc=$cfg->{services}->{$s}; 
+     next if $sc->{proxytype} eq 'skip';
+     #print "Service; $s\n";
+     die "Port not defined for $s\n" if ! defined $sc->{port};
+     if ($ssl){
+       proxy($new,$s,$sc) if ! defined $sc->{proxytype};
+       fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
+     }
+     else{
+       docs($new,$s,$sc);
+       mkdir "/kb/docs/services/$s";
+     }
+  }
+}
+
+sub proxy {
+  my $fh=shift;
+  my $service=shift;
+  my $s=shift;
+  
+
+  print $fh "        location /service/$service {\n";
+  print $fh "            proxy_pass http://".$s->{host}.":".$s->{port}."/",$s->{base}."\n";
+  print $fh "         }\n";
+    
+}
+
+sub fastcgi {
+  my $fh=shift;
+  my $service=shift;
+  my $s=shift;
+
+  print $fh "        location /services/$service {\n";
+  print $fh "            # host and port to fastcgi server\n";
+  print $fh "            rewrite /services/$service(.*) \$1 break;\n";
+  print $fh "            fastcgi_pass ".$s->{host}.":".$s->{port}."\n";
+  print $fh "            fastcgi_param PATH_INFO \$fastcgi_script_name;\n";
+  print $fh "            fastcgi_param REQUEST_METHOD \$request_method;\n";
+  print $fh "            fastcgi_param QUERY_STRING \$query_string;\n";
+  print $fh "            fastcgi_param CONTENT_TYPE \$content_type;\n";
+  print $fh "            fastcgi_param CONTENT_LENGTH \$content_length;\n";
+  print $fh "            fastcgi_param SERVER_NAME \$server_name;\n";
+  print $fh "            fastcgi_param SERVER_PORT \$server_port;\n";
+  print $fh "            fastcgi_param SERVER_PROTOCOL \$server_port;\n";
+  print $fh "            fastcgi_pass_header Authorization;\n";
+  print $fh "            fastcgi_intercept_errors off;\n";
+  print $fh "            fastcgi_param REMOTE_ADDR \$remote_addr;\n";
+  print $fh "        }\n";
+}
+
+sub docs {
+  my $fh=shift;
+  my $service=shift;
+  my $s=shift;
+  my $servicedir=$service;
+  $servicedir=$s->{basename} if defined $s->{basename};
+
+  print $fh "        location /services/docs/$servicedir {\n";
+  print $fh "            proxy_pass http://".$s->{host}."/".$servicedir.";\n";
+  print $fh "        }\n";
+
+}
+
+

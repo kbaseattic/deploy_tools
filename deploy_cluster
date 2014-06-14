@@ -1,9 +1,9 @@
 #!/usr/bin/env perl 
 
 use lib './perl';
-use Config::IniFiles;
 use Switch;
 use Data::Dumper;
+use KBDeploy;
 use strict;
 
 my $debug=0;
@@ -13,7 +13,7 @@ my $basedir="/root/dt";
 my $globaltag='global';
 
 
-my $cfg=read_config($cfgfile);
+my $cfg=read_config($cfgfile,$globaltag);
 
 my $command=shift @ARGV;
 
@@ -38,38 +38,11 @@ switch ($command) {
 }
 
 
-sub read_config {
-   my $file=shift;
-   my $cfg;
-   my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open cluster.ini".@Config::IniFiles::errors[0];
-
-   # Could use the tie option, but let's build it up ourselves
-
-   for my $section ($mcfg->Sections()){
-     if ($section eq $globaltag){
-       foreach ($mcfg->Parameters($section)){
-         $cfg->{global}->{$_}=$mcfg->val($section,$_);
-       }
-     }
-     else {
-       push @{$cfg->{servicelist}},$section;
-       $cfg->{services}->{$section}->{mem}=$cfg->{global}->{mem};
-       $cfg->{services}->{$section}->{cores}=$cfg->{global}->{cores};
-       foreach ($mcfg->Parameters($section)){
-         $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
-       }
-     }
-   }
-  return $cfg;
-}  
-
-
-
 sub vmpreflight {
   # Check that group exist
   if (system("lsdef -t group ".$cfg->{global}->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
     print "Add group\n";
-    system("mkdef -t group $cfg->{global}->{xcatgroup}") eq 0 or die "Unable to create group";
+    mysystem("mkdef -t group $cfg->{global}->{xcatgroup}");
   }
 
   # Get a list of configured services and used nodes
@@ -84,7 +57,7 @@ sub vmpreflight {
 
   # Create a list of nodes that can be used
   for (my $i=1;$i<$cfg->{global}->{maxnodes};$i++){
-    my $name=sprintf "%s%02d",$cfg->{global}->{base},$i;
+    my $name=sprintf "%s%02d",$cfg->{global}->{basename},$i;
     if (! defined $cfg->{nodes}->{used}->{$name}){
       push @{$cfg->{nodes}->{available}},$name;
     }
@@ -93,7 +66,7 @@ sub vmpreflight {
 
 
 sub boot_nodes {
-  system("rpower $cfg->{global}->{xcatgroup} on > /dev/null") eq 0 or die "Unable to rpower\n"; 
+  mysystem("rpower $cfg->{global}->{xcatgroup} on > /dev/null");
   while(system("nodestat $cfg->{global}->{xcatgroup}|grep -vc sshd > /dev/null") eq 0){
     sleep 5;
   }
@@ -101,7 +74,7 @@ sub boot_nodes {
 }
 
 sub configure_vm {
-  foreach my $service (keys %{$cfg->{services}}){
+  foreach my $service (@{$cfg->{servicelist}}){
     #next if $service eq $globaltag;
     print "Service: $service\n";
     if (! defined $cfg->{services}->{$service}->{host}){
@@ -115,9 +88,9 @@ sub configure_vm {
     }
   }
   # Post creation
-  system("makehosts $cfg->{global}->{xcatgroup}") eq 0 or die "Unable to run makehost\n"; 
-  system("makeconservercf $cfg->{global}->{xcatgroup}") eq 0 or die "Unable to run makeconservercf\n"; 
-  system("makedhcp $cfg->{global}->{xcatgroup}") eq 0 or die "Unable to run makedhcp\n"; 
+  mysystem("makehosts $cfg->{global}->{xcatgroup}");
+  mysystem("makeconservercf $cfg->{global}->{xcatgroup}");
+  mysystem("makedhcp $cfg->{global}->{xcatgroup}");
 }
 
 
@@ -129,14 +102,14 @@ sub config_host{
   my $cores=$cfg->{services}->{$service}->{cores};
 
   print "Configuring $host for $service with $mem and $cores cores\n";
-  system("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups})==0 or die "Unable to add node";
-  system("nodech $host nodelist.comments=$service")==0 or die "nodech failed";
-  my $alias=$cfg->{global}->{base}."-".$service;
-  system("chdef $host vmmemory=$mem vmcpus=$cores hostnames=$alias")==0 or die "chdef failed";
-  system("clonevm $host -b ".$cfg->{global}->{baseimage}) eq 0 or die "Unable to create vm for $host\n";
+  mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
+  mysystem("nodech $host nodelist.comments=$service");
+  my $alias=$cfg->{global}->{basename}."-".$service;
+  mysystem("chdef $host vmmemory=$mem vmcpus=$cores hostnames=$alias");
+  mysystem("clonevm $host -b ".$cfg->{global}->{baseimage});
   if (defined $cfg->{services}->{$service}->{disk}){
     foreach my $size (split /,/,$cfg->{services}->{$service}->{disk}){
-      system("chvm $host -a $size") eq 0 or die "Unable to add disk";
+      mysystem("chvm $host -a $size");
     }
   }
 }
@@ -145,18 +118,18 @@ sub config_nodes{
 
    vmpreflight();
    # Push out the scripts
-   system("xdsh $cfg->{global}->{xcatgroup} '[ -e $basedir ] || mkdir $basedir'") eq 0 or die "Failed to mkdir on remote";
-   system("xdcp $cfg->{global}->{xcatgroup} $0 $basedir/$0") eq 0 or die "Failed to copy files";
-   system("xdcp $cfg->{global}->{xcatgroup} $cfgfile $basedir/$cfgfile") eq 0 or die "Failed to copy files";
-   system("xdcp $cfg->{global}->{xcatgroup} -R perl $basedir/") eq 0 or die "Failed to copy files";
-   system("xdcp $cfg->{global}->{xcatgroup} -R config $basedir/") eq 0 or die "Failed to copy files";
+   my $xg=$cfg->{global}->{xcatgroup};
+   mysystem("xdsh $xg '[ -e $basedir ] || mkdir $basedir'");
+   mysystem("xdcp $xg $0 $basedir/$0");
+   mysystem("xdcp $xg $cfgfile $basedir/$cfgfile");
+   mysystem("xdcp $xg -R perl $basedir/");
+   mysystem("xdcp $xg -R config $basedir/");
 
    #Now run the local scripts
-   for my $service (keys %{$cfg->{services}}){
-     my $script=$cfg->{services}->{$service}->{setup};
-     if (defined $script){
-       print "Runnig $script on $service\n";
-       system("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script'") eq 0 or die "Unable to run $script\n";
-     }
+   for my $service (@{$cfg->{servicelist}}){
+     my $script=$cfg->{$globaltag}->{setup};
+     $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
+     print "Runnig $script on $service\n";
+     mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script'");
    }
 }

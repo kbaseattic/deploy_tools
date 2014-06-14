@@ -1,0 +1,27 @@
+#!/bin/sh
+
+# Fix up setup
+echo 'export ANT_HOME=$KB_RUNTIME/ant' >> ./user-env.sh
+echo 'export DEPLOY_RUNTIME=$KB_RUNTIME' >> ./user-env.sh
+
+
+if [ $(grep -c 'DEPLOY_RUNTIME = /kb/runtime' Makefile) -gt 0 ] ; then
+echo "Patching Makefile"
+
+cat << EOF |patch -p0
+--- Makefile.orig	2014-06-13 16:35:12.000000000 -0700
++++ Makefile	2014-06-13 16:35:20.000000000 -0700
+@@ -9,8 +9,8 @@
+ #
+ # Default deplyment target. May be overridden to deploy to an alternative location.
+ #
+-TARGET = /kb/deployment
+-DEPLOY_RUNTIME = /kb/runtime
++TARGET ?= /kb/deployment
++DEPLOY_RUNTIME ?= /kb/runtime
+ 
+ all: build_modules
+ 
+EOF
+
+fi

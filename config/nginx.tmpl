@@ -1,0 +1,109 @@
+
+server {
+	#listen   80; ## listen for ipv4; this line is default and implied
+	#listen   [::]:80 default ipv6only=on; ## listen for ipv6
+
+	root /usr/share/nginx/www;
+	index index.html index.htm;
+
+	# Make site accessible from http://localhost/
+	server_name localhost;
+
+	location / {
+		# First attempt to serve request as file, then
+		# as directory, then fall back to index.html
+		try_files $uri $uri/ /index.html;
+	}
+        location /services {
+                root /kb/docs;
+                autoindex on;
+        }
+        location /labs {
+                root /kb/docs;
+                autoindex on;
+        }
+
+	location /doc {
+		root /usr/share;
+		autoindex on;
+		allow 127.0.0.1;
+		deny all;
+	}
+
+	location /images {
+		root /usr/share;
+		autoindex off;
+	}
+
+        #location /services/search/ {
+        #        proxy_pass http://t51:7079/;
+        #}
+        #location /services/search-doc/ {
+        #        proxy_pass http://t51:7080/;
+        #}
+
+        #%INCLUDE%
+
+}
+
+
+# HTTPS server
+#
+server {
+	listen 443;
+	server_name localhost;
+
+	ssl on;
+	ssl_certificate /etc/nginx/ssl/server.crt;
+	ssl_certificate_key /etc/nginx/ssl/server.key.insecure;
+
+	ssl_session_timeout 5m;
+
+	ssl_protocols SSLv3 TLSv1;
+	ssl_ciphers ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv3:+EXP;
+	ssl_prefer_server_ciphers on;
+
+        root /usr/share/nginx/www;
+        index index.html index.htm;
+
+        # Make site accessible from http://localhost/
+        server_name localhost;
+
+        location / {
+                # First attempt to serve request as file, then
+                # as directory, then fall back to index.html
+                try_files $uri $uri/ /index.html;
+        }
+        location /services {
+                root /kb/docs;
+                autoindex on;
+        }
+        location /labs {
+                root /kb/docs;
+                autoindex on;
+        }
+
+        location /doc {
+                root /usr/share;
+                autoindex on;
+                allow 127.0.0.1;
+                deny all;
+        }
+
+        location /images {
+                root /usr/share;
+                autoindex off;
+        }
+
+        #location /services/search-api/ {
+        #       add_header Access-Control-Allow-Origin *;
+        #       proxy_pass http://t51:7078/;
+        #}
+
+        #location /solr {
+        #        add_header Access-Control-Allow-Origin *;
+        #        proxy_pass http://t51:7077/;
+        #}
+
+	#%SSLINCLUDE%
+}

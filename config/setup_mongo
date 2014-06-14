@@ -1,18 +1,17 @@
 #!/usr/bin/env perl 
 
 use lib '../perl';
-use Config::IniFiles;
-use Switch;
 use Data::Dumper;
+use KBDeploy;
 use strict;
 
 my $debug=0;
 
 my $cfgfile="../cluster.ini";
 my $basedir="/root/dt";
-my $globaltag='global';
+my $gtag='global';
 
-my $cfg=read_config($cfgfile);
+my $cfg=read_config($cfgfile,$gtag);
 
 mysystem("[ -e /sbin/mkfs.xfs ] ||  apt-get -y install xfsprogs");
 
@@ -90,42 +89,9 @@ for my $s (keys %{$cfg->{services}}){
   }
 }
 
-sub read_config {
-   my $file=shift;
-   my $cfg;
-   my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open cluster.ini".@Config::IniFiles::errors[0];
-
-   # Could use the tie option, but let's build it up ourselves
-
-   for my $section ($mcfg->Sections()){
-     if ($section eq $globaltag){
-       foreach ($mcfg->Parameters($section)){
-         $cfg->{global}->{$_}=$mcfg->val($section,$_);
-       }
-     }
-     else {
-       push @{$cfg->{servicelist}},$section;
-       $cfg->{services}->{$section}->{mem}=$cfg->{global}->{mem};
-       $cfg->{services}->{$section}->{cores}=$cfg->{global}->{cores};
-       foreach ($mcfg->Parameters($section)){
-         $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
-       }
-     }
-   }
-  return $cfg;
-}  
-
-
-sub mysystem {
-  foreach (@_){
-    system($_) eq 0 or die "Failed on $_ in $0\n";
-  }
-}
-
-
 sub adduser {
  my ($db,$user,$pwd,$roles)=@_;
+ # TODO: Add some type of check
  my $com="use $db;\ndb.createUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
- print $com;
- mysystem("echo '$com'|mongo");
+ mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
 }
