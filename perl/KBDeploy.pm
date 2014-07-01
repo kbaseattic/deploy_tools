@@ -34,7 +34,7 @@ sub read_config {
      else {
        $cfg->{services}->{$section}->{mem}=$cfg->{$globaltag}->{mem};
        $cfg->{services}->{$section}->{cores}=$cfg->{$globaltag}->{cores};
-       $cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
+       #$cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
        foreach ($mcfg->Parameters($section)){
          $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
        }
@@ -44,6 +44,20 @@ sub read_config {
      }
    }
   return $cfg;
+}
+
+sub update_config {
+   my $file=shift;
+   my $section=shift;
+   my $param=shift;
+   my $value=shift;
+
+   my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+   if ( ! defined $mcfg->val($section,$param)){
+     $mcfg->newval($section,$param,$value);
+   }
+   $mcfg->WriteConfig($file);
 }
 
 

@@ -31,6 +31,9 @@ switch ($command) {
   }
   case /start/ {
   }
+  case /updatehostassignments/ {
+     vmpreflight();
+  }
   else {
     printf stderr "Usage: $0 <mkvm|boot|confnodes|start>\n";
     exit 1;
@@ -112,6 +115,7 @@ sub config_host{
       mysystem("chvm $host -a $size");
     }
   }
+  KBDeploy::update_config($cfgfile,$service,'host',$host);
 }
 
 sub config_nodes{
