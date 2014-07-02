@@ -1,0 +1,11 @@
+- add mysql-client to base
+
+- change cluster.ini to deployment.cfg
+
+- workspace still requires a special step
+
+- change shock and awe config files to be generated from ini file
+
+- Add something for external network interface to config file 
+
+- Split up deploy_service for the git checkout portion and the build step
