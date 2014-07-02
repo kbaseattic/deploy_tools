@@ -28,6 +28,7 @@ if ($doformat) {
   mkdir "/data" unless -e "/data";
   mysystem("mount /dev/vdb /data");
   mkdir "/data/mongodb";
+  mysystem("chown 113 /data/mongodb");
 }
 
 # Add repo
@@ -40,12 +41,15 @@ if (! -e "/usr/bin/mongo" ){
 }
 
 # Copy config files
-mysystem("cp mongo.conf /etc/mongo.conf");
+mysystem("cp mongo.conf /etc/mongod.conf");
 # Keyfile
 mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
 
 # restart
-#mysystem("/etc/init.d/mongod restart");
+mysystem("/etc/init.d/mongod restart");
+
+mysystem("echo 'rs.initiate();'|mongo");
+sleep(10);
 
 #
 #db = db.getSiblingDB('admin');
@@ -53,7 +57,7 @@ mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/key
 my $user=$cfg->{services}->{mongo}->{user};
 my $pwd=$cfg->{services}->{mongo}->{pwd};
 if ( ! -e "/root/.mongorc.js"){
-  adduser('admin',$user,$pwd, "[\"userAdminAnyDatabase\"]");
+  adduser('admin',$user,$pwd, "[\"userAdminAnyDatabase\",\"root\"]");
   open(RC,"> /root/.mongorc.js");
   print RC "db = db.getSiblingDB('admin')\n";
   print RC "db.auth('$user','$pwd')\n";
@@ -63,9 +67,6 @@ if ( ! -e "/root/.mongorc.js"){
   close MC;
   mysystem("/etc/init.d/mongod restart");
 }
-
-
-
 
 for my $s (keys %{$cfg->{services}}){
   my $mh=$cfg->{services}->{$s}->{'mongodb-host'};
@@ -90,8 +91,8 @@ for my $s (keys %{$cfg->{services}}){
 }
 
 sub adduser {
- my ($db,$user,$pwd,$roles)=@_;
- # TODO: Add some type of check
- my $com="use $db;\ndb.createUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
- mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
+  my ($db,$user,$pwd,$roles)=@_;
+  # TODO: Add some type of check
+  my $com="use $db;\ndb.createUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
+  mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
 }
