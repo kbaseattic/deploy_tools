@@ -1,0 +1,42 @@
+#!/usr/bin/env perl 
+
+use lib './perl';
+use Config::IniFiles;
+use KBDeploy;
+use Switch;
+
+my $debug=1;
+
+my $cfgfile="./cluster.ini";
+
+my $cfg=read_config($cfgfile,'global');
+
+# Get a list of configured services and used nodes
+open(L,"nodels $cfg->{global}->{xcatgroup} nodelist.comments|");
+while(<L>){
+  chomp;
+  my ($host,$service)=split /: /;
+  #$cfg->{services}->{$service}->{host}=$host;
+  #print "Found $service on $host\n" if $debug;
+  $cfg->{nodes}->{used}->{$host}=1;
+  if (! defined $cfg->{services}->{$service}->{host}){
+     print "Add Service $service\n";
+     update_config($cfgfile,$service,'host',$host);
+  }
+}
+
+
+sub update_config {
+   my $file=shift;
+   my $section=shift;
+   my $param=shift;
+   my $value=shift;
+
+   my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+   if ( ! defined $mcfg->val($section,$param)){
+     $mcfg->newval($section,$param,$value);
+   }
+   $mcfg->WriteConfig($file);
+}
+

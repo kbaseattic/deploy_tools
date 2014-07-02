@@ -1,0 +1,37 @@
+#!/usr/bin/env perl 
+
+# TODO: Change things to run as non-root
+
+use lib '../perl';
+use KBDeploy;
+use Config::IniFiles;
+use strict;
+
+my $cfg=read_config("../cluster.ini",'global');
+
+
+my $me=`hostname`;
+chomp $me;
+
+exit if -e '/kb/deployment';
+
+my @sl=myservices($me);
+
+stop_service(@sl);
+
+deploy_service(@sl);
+
+my $file=$cfg->{'global'}->{deploydir}."/servies/shock_service/conf/shock.cfg";
+
+# Fix up config
+
+my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+$mcfg->setval('Mongodb','hosts',$cfg->{services}->{shock}->{'mongodb-host'});
+$mcfg->setval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
+$mcfg->setval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
+$mcfg->setval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
+
+mysystem("cp shock.cfg ".$cfg->{'global'}->{deploydir}."/servies/shock_service");
+
+start_service(@sl);

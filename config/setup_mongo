@@ -46,9 +46,9 @@ mysystem("cp mongo.conf /etc/mongod.conf");
 mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
 
 # restart
-mysystem("/etc/init.d/mongod restart");
+mysystem("service mongod restart");
 
-mysystem("echo 'rs.initiate();'|mongo");
+mysystem("echo 'rs.initiate();'|mongo|grep -v shell|grep -v connecting|grep ok");
 sleep(10);
 
 #
