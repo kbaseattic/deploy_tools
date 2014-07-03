@@ -239,6 +239,7 @@ sub deploy_service {
 
   # Extingush all traces of previous deployments
   my $d=`date +%s`;
+  chomp $d;
   rename($KB_DEPLOY,"$KB_DEPLOY.$d") if -e $KB_DEPLOY;
   mysystem("rm -rf $KB_DC") if (-e $KB_DC);
 

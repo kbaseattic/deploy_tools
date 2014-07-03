@@ -13,24 +13,26 @@ my $cfg=read_config("../cluster.ini",'global');
 my $me=`hostname`;
 chomp $me;
 
-exit if -e '/kb/deployment';
-
 my @sl=myservices($me);
 
 stop_service(@sl);
 
 deploy_service(@sl);
 
-my $file=$cfg->{'global'}->{deploydir}."/servies/awe_service/conf/awe.cfg";
+my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
 
 # Fix up config
 
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
 $mcfg->setval('Mongodb','hosts',$cfg->{services}->{awe}->{'mongodb-host'});
-$mcfg->setval('Mongodb','database',$cfg->{services}->{awe}->{'mongodb-database'});
-$mcfg->setval('Mongodb','user',$cfg->{services}->{awe}->{'mongodb-user'});
-$mcfg->setval('Mongodb','password',$cfg->{services}->{awe}->{'mongodb-pwd'});
+$mcfg->newval('Mongodb','database',$cfg->{services}->{awe}->{'mongodb-database'});
+$mcfg->newval('Mongodb','user',$cfg->{services}->{awe}->{'mongodb-user'});
+$mcfg->newval('Mongodb','password',$cfg->{services}->{awe}->{'mongodb-pwd'});
+$mcfg->setval('Ports','api-port',$cfg->{services}->{awe}->{'port'});
+$mcfg->setval('Admin','email','scanon@lbl.gov');
+# Reuse mongo password
+$mcfg->setval('Admin','secretkey',$cfg->{services}->{awe}->{'mongodb-pwd'});
 
 $mcfg->WriteConfig($file);
 

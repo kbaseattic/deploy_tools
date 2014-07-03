@@ -21,16 +21,16 @@ stop_service(@sl);
 
 deploy_service(@sl);
 
-my $file=$cfg->{'global'}->{deploydir}."/servies/shock_service/conf/shock.cfg";
+my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 
 # Fix up config
 
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
 $mcfg->setval('Mongodb','hosts',$cfg->{services}->{shock}->{'mongodb-host'});
-$mcfg->setval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
-$mcfg->setval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
-$mcfg->setval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
+$mcfg->newval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
+$mcfg->newval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
+$mcfg->newval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
 
 mysystem("cp shock.cfg ".$cfg->{'global'}->{deploydir}."/servies/shock_service");
 
