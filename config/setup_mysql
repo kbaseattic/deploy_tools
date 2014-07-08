@@ -1,20 +1,132 @@
-#!/bin/sh
+#!/usr/bin/perl
+
+use lib '../perl';
+use Data::Dumper;
+use KBDeploy;
+use strict;
+
+my $debug=0;
+
+my $cfgfile="../cluster.ini";
+my $gtag='global';
+
+my $cfg=read_config($cfgfile,$gtag);
+
+my %userexist;
+my %dbexist;
 
 # Install Maria
 
-if [ $(mysql -V|grep -c Maria) -ne 1 ] ; then
-  apt-get -y install python-software-properties
-  apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db
-  add-apt-repository 'deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/ubuntu precise main'
+my $vers=`mysql -V`;
 
-  apt-get -y update
-  apt-get -y install mariadb-server
-fi
+if (! $vers=~/MariaDB/){
+  mysystem("apt-get -y install python-software-properties");
+  mysystem("apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db");
+  mysystem("add-apt-repository 'deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/ubuntu precise main'");
+  mysystem("apt-get -y update; apt-get -y install mariadb-server");
+}
+else{
+  print "MariaDB Installed\n" if $debug;
+}
 
-# Install XFS
-if [ $(grep -c /data /proc/mounts) -lt 1 ] ; then
-  apt-get -y install xfsprogs
-  mkfs -t xfs /dev/vdb
-  mkdir /data
-  mount /dev/vdb /data
-fi
+
+# Format data
+my $doformat=1;
+open(M,"/proc/mounts");
+while(<M>){
+  $doformat=0 if /\/data/; 
+}
+
+mysystem("[ -e /sbin/mkfs.xfs ] ||  apt-get -y install xfsprogs");
+
+if ($doformat) {
+  die "Missing /dev/vdb" unless -e "/dev/vdb";
+  mysystem("mkfs -t xfs /dev/vdb");
+  mkdir "/data" unless -e "/data";
+  mysystem("mount /dev/vdb /data");
+  mkdir "/data/mysql";
+  mysystem("chown mysql /data/mysql");
+}
+else{
+  print "/data mounted\n" if $debug;
+}
+
+getusers();
+getdbs();
+
+#
+# Create accounts
+for my $s (keys %{$cfg->{services}}){
+  if (defined $cfg->{services}->{$s}->{'data-source'}){
+    print "Adding mysql user for $s\n" if $debug;
+    my @tmp;
+    @tmp=split /:/,$cfg->{services}->{$s}->{'data-source'};
+    my $dbuser=$cfg->{services}->{$s}->{'mysql-user'};
+    my $dbpass=$cfg->{services}->{$s}->{'mysql-pass'};
+    my $dbdb=$tmp[2];
+    my $perm=$cfg->{services}->{$s}->{'mysql-perm'};
+    add_user($dbuser,$dbpass,$dbdb,$perm);
+  }
+  elsif (defined $cfg->{services}->{$s}->{'userData'}){  # cdmi
+    print "Adding mysql user for $s\n" if $debug;
+    my @tmp;
+    @tmp=split /\//,$cfg->{services}->{$s}->{'userData'};
+    my $dbuser=$tmp[0];
+    my $dbpass=$tmp[1];
+    my $dbdb=$cfg->{services}->{$s}->{'dbName'};
+    my $perm=$cfg->{services}->{$s}->{'mysql-perm'};
+    add_user($dbuser,$dbpass,$dbdb,$perm);
+  }
+  elsif (defined $cfg->{services}->{$s}->{'dbname'}){  # translation
+    print "Adding mysql user for $s\n" if $debug;
+    my $dbuser=$cfg->{services}->{$s}->{'user'};
+    my $dbpass=$cfg->{services}->{$s}->{'pass'};
+    my $dbdb=$cfg->{services}->{$s}->{'dbname'};
+    my $perm=$cfg->{services}->{$s}->{'mysql-perm'};
+    add_user($dbuser,$dbpass,$dbdb,$perm);
+  }
+}
+
+open(L,"ls *.sql|");
+while (<L>){
+  chomp;
+  mysystem("cat *.sql|mysql");
+}
+close L;
+
+sub getusers {
+  open(U,"echo 'select User from user'|mysql mysql|");
+  while(<U>){
+    chomp;
+    $userexist{$_}=1;
+  }
+}
+
+sub getdbs {
+  open(U,"echo 'show DATABASES'|mysql mysql|");
+  while(<U>){
+    chomp;
+    $dbexist{$_}=1;
+  }
+}
+
+sub add_user {
+  my $user=shift;
+  my $pass=shift;
+  my $db=shift;
+  my $perm=shift;
+
+  my $mycom; 
+  $perm='SELECT' if (! defined $perm);
+  open(MY,"|mysql");
+  printf MY "CREATE USER '%s'\@'%%' IDENTIFIED BY '%s';\n",$user,$pass unless $userexist{$user};
+  $userexist{$user}=1;
+  printf MY "CREATE DATABASE %s;\n",$db unless $dbexist{$db};
+  $dbexist{$db}=1;
+  printf MY "GRANT %s ON %s.* TO '%s'\@'%%';\n",$perm,$db,$user;
+  close MY;
+#  mysystem("cat << EOF|mysql\n".$mycom."EOF\n");
+#  print "$mycom";
+}
+
+
