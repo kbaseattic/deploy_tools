@@ -8,7 +8,6 @@ use strict;
 my $debug=0;
 
 my $cfgfile="../cluster.ini";
-my $basedir="/root/dt";
 my $gtag='global';
 
 my $cfg=read_config($cfgfile,$gtag);
@@ -36,10 +35,11 @@ sub printserv{
      #print "Service; $s\n";
      die "Port not defined for $s\n" if ! defined $sc->{port};
      if ($ssl){
-       proxy($new,$s,$sc) if ! defined $sc->{proxytype};
+       proxy($new,$sc) if ! defined $sc->{proxytype};
        fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
      }
      else{
+       proxy($new,$sc) if ! defined $sc->{proxytype};
        docs($new,$s,$sc);
        mkdir "/kb/docs/services/$s";
      }
@@ -48,13 +48,11 @@ sub printserv{
 
 sub proxy {
   my $fh=shift;
-  my $service=shift;
   my $s=shift;
-  
-
-  print $fh "        location /service/$service {\n";
-  print $fh "            proxy_pass http://".$s->{host}.":".$s->{port}."/",$s->{base}."\n";
-  print $fh "         }\n";
+ 
+  print $fh "        location /services/$s->{urlname} {\n";
+  print $fh "            proxy_pass http://".$s->{host}.":".$s->{port}."/",$s->{base}.";\n";
+  print $fh "        }\n";
     
 }
 
@@ -66,7 +64,7 @@ sub fastcgi {
   print $fh "        location /services/$service {\n";
   print $fh "            # host and port to fastcgi server\n";
   print $fh "            rewrite /services/$service(.*) \$1 break;\n";
-  print $fh "            fastcgi_pass ".$s->{host}.":".$s->{port}."\n";
+  print $fh "            fastcgi_pass ".$s->{host}.":".$s->{port}.";\n";
   print $fh "            fastcgi_param PATH_INFO \$fastcgi_script_name;\n";
   print $fh "            fastcgi_param REQUEST_METHOD \$request_method;\n";
   print $fh "            fastcgi_param QUERY_STRING \$query_string;\n";
