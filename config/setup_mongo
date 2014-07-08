@@ -8,7 +8,6 @@ use strict;
 my $debug=0;
 
 my $cfgfile="../cluster.ini";
-my $basedir="/root/dt";
 my $gtag='global';
 
 my $cfg=read_config($cfgfile,$gtag);
@@ -49,7 +48,7 @@ mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/key
 mysystem("service mongod restart");
 
 mysystem("echo 'rs.initiate();'|mongo|grep -v shell|grep -v connecting|grep ok");
-sleep(10);
+sleep(5);
 
 #
 #db = db.getSiblingDB('admin');
