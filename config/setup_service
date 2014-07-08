@@ -12,9 +12,11 @@ my $cfg=read_config("../cluster.ini",'global');
 my $me=`hostname`;
 chomp $me;
 
-exit if -e '/kb/deployment';
 
 my @sl=myservices($me);
+
+mkdocs(@sl);
+exit if -e '/kb/deployment';
 
 stop_service(@sl);
 

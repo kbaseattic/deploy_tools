@@ -15,7 +15,7 @@ use vars  qw(@ISA @EXPORT_OK);
 use base qw(Exporter);
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service deploy_service myservices);
+our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service deploy_service myservices mkdocs);
 
 our $cfg;
 our $globaltag;
@@ -81,6 +81,7 @@ sub read_config {
        $cfg->{services}->{$section}->{cores}=$cfg->{$globaltag}->{cores};
        #$cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
        $cfg->{services}->{$section}->{urlname}=$section;
+       $cfg->{services}->{$section}->{basedir}=$section;
        foreach ($mcfg->Parameters($section)){
          $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
        }
@@ -281,6 +282,14 @@ sub deploy_service {
 
   # Copy the deployment config from the reference copy
   mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
+}
+
+sub mkdocs {
+  my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
+  for my $s (@_){
+    my $bd=$cfg->{services}->{$s}->{basedir};
+    symlink $KB_DEPLOY."/services/$bd/webroot","/var/www/$bd";
+  } 
 }
 
 

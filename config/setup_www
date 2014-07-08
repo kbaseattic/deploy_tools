@@ -15,6 +15,11 @@ my $cfg=read_config($cfgfile,$gtag);
 mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
 mysystem("[ -e /usr/sbin/nginx ] || apt-get -y install nginx");
 
+mkdir "/kb" if ( ! -e "/kb/");
+mkdir "/kb/docs" if ( ! -e "/kb/docs");
+mkdir "/kb/docs/services" if ( ! -e "/kb/docs/services");
+mkdir "/kb/docs/services/docs" if ( ! -e "/kb/docs/services/docs");
+
 open(T,"./nginx.tmpl") or die "Unable to open template";
 open(my $new,">  /etc/nginx/sites-enabled/default") or die "Unable to open nginx file";
 #open(my $new,">  /tmp/default");
@@ -24,7 +29,7 @@ while(<T>){
   printserv($new,1) if (/\%SSLINCLUDE/);
 }
 close N;
-#print `service nginx restart`;
+print `service nginx restart`;
 
 sub printserv{
   my $new=shift; 
@@ -35,19 +40,21 @@ sub printserv{
      #print "Service; $s\n";
      die "Port not defined for $s\n" if ! defined $sc->{port};
      if ($ssl){
-       proxy($new,$sc) if ! defined $sc->{proxytype};
+       proxy($new,$s,$sc) if ! defined $sc->{proxytype};
        fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
      }
      else{
-       proxy($new,$sc) if ! defined $sc->{proxytype};
        docs($new,$s,$sc);
+       proxy($new,$s,$sc) if ! defined $sc->{proxytype};
        mkdir "/kb/docs/services/$s";
+       mkdir "/kb/docs/services/docs/$sc->{basedir}";
      }
   }
 }
 
 sub proxy {
   my $fh=shift;
+  my $service=shift;
   my $s=shift;
  
   print $fh "        location /services/$s->{urlname} {\n";
@@ -84,7 +91,7 @@ sub docs {
   my $service=shift;
   my $s=shift;
   my $servicedir=$service;
-  $servicedir=$s->{basename} if defined $s->{basename};
+  $servicedir=$s->{basedir} if defined $s->{basedir};
 
   print $fh "        location /services/docs/$servicedir {\n";
   print $fh "            proxy_pass http://".$s->{host}."/".$servicedir.";\n";
