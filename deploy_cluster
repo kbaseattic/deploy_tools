@@ -9,11 +9,11 @@ use strict;
 my $debug=0;
 
 my $cfgfile="./cluster.ini";
-my $basedir="/root/dt";
 my $globaltag='global';
 
 
 my $cfg=read_config($cfgfile,$globaltag);
+my $basedir=$cfg->{$globaltag}->{dtdir};
 
 my $command=shift @ARGV;
 
@@ -26,10 +26,11 @@ switch ($command) {
   case /boot/ {
     boot_nodes();
   }
+  case /syncnodes/ {
+    sync_nodes();
+  }
   case /confnodes/ {
     config_nodes();
-  }
-  case /start/ {
   }
   case /updatehostassignments/ {
      vmpreflight();
@@ -37,8 +38,14 @@ switch ($command) {
   case /status/ {
      status();
   }
+  case /startservice/ {
+     startservice();
+  }
+  case /start$/ {
+     start();
+  }
   else {
-    printf stderr "Usage: $0 <mkvm|boot|confnodes|start>\n";
+    printf stderr "Usage: $0 <mkvm|boot|syncnodes|confnodes|start>\n";
     exit 1;
   }
 }
@@ -121,9 +128,7 @@ sub config_host{
   KBDeploy::update_config($cfgfile,$service,'host',$host);
 }
 
-sub config_nodes{
-
-   vmpreflight();
+sub sync_nodes {
    # Push out the scripts
    my $xg=$cfg->{global}->{xcatgroup};
    mysystem("xdsh $xg '[ -e $basedir ] || mkdir $basedir'");
@@ -131,6 +136,12 @@ sub config_nodes{
    mysystem("xdcp $xg $cfgfile $basedir/$cfgfile");
    mysystem("xdcp $xg -R perl $basedir/");
    mysystem("xdcp $xg -R config $basedir/");
+}
+
+sub config_nodes{
+
+   vmpreflight();
+   sync_nodes();
 
    #Now run the local scripts
    for my $service (@{$cfg->{servicelist}}){
@@ -144,4 +155,21 @@ sub config_nodes{
 sub status{
    my $xg=$cfg->{global}->{xcatgroup};
    mysystem("xdsh $xg 'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$'");
+}
+
+sub start{
+   sync_nodes();
+   my $xg=$cfg->{global}->{xcatgroup};
+   print "Here I am\n";
+   mysystem("xdsh next 'cd $basedir/;./$0 startservice'");
+}
+
+sub startservice{
+  my $me=`hostname`;
+  chomp $me;
+  print "$me\n";
+
+  my @sl=myservices($me);
+
+  start_service(@sl);
 }

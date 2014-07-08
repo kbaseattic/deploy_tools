@@ -23,7 +23,6 @@ our %repo;
 
 # TODO: sometimes the service block name is different than the repo name.  Change this to a function.
 our %reponame;
-our $LOGFILE="/tmp/deploy.log";
 our $basedir="/root/dt";
 
 # Defaults and paths
@@ -36,7 +35,7 @@ our $basedir="/root/dt";
 #$KB_RT=$cfg->{$gtag}->{runtime} if (defined $cfg->{$gtag}->{runtime});
 
 
-$ENV{'GIT_SSH'}="/root/dt/config/gitssh";
+$ENV{'GIT_SSH'}=$basedir."/config/gitssh";
 
 sub maprepos {
   for my $s (keys %{$cfg->{services}}){
@@ -81,6 +80,7 @@ sub read_config {
        $cfg->{services}->{$section}->{mem}=$cfg->{$globaltag}->{mem};
        $cfg->{services}->{$section}->{cores}=$cfg->{$globaltag}->{cores};
        #$cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
+       $cfg->{services}->{$section}->{urlname}=$section;
        foreach ($mcfg->Parameters($section)){
          $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
        }
@@ -90,6 +90,8 @@ sub read_config {
      }
    }
    maprepos();
+  $basedir=$cfg->{$globaltag}->{dtdir};
+  $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
   return $cfg;
 }
 
@@ -231,8 +233,22 @@ sub stop_service {
   }
 }
 
+sub prepare_service {
+  my $LOGFILE=shift;
+  my $KB_DC=shift;
+
+  chdir "$KB_DC/modules";
+  for my $mserv (@_) {
+    print "Deploying $mserv\n";
+    # Clone or update the module
+    clonetag $mserv;
+    # Now get any dependencies
+    getdeps $mserv;
+  }
+}
 
 sub deploy_service {
+  my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
   my $KB_DC=$cfg->{$globaltag}->{devcontainer};
   my $KB_RT=$cfg->{$globaltag}->{runtime};
@@ -247,19 +263,9 @@ sub deploy_service {
   unlink $LOGFILE if ( -e $LOGFILE );
 
   # Create the dev container and some common dependencies
-  if ( ! -e "$KB_DEPLOY/bin/compile_typespec" ) {
-    deploy_devcontainer($LOGFILE);
-  }
+  deploy_devcontainer($LOGFILE) unless ( -e "$KB_DEPLOY/bin/compile_typespec" );
 
-  chdir "$KB_DC/modules";
-  for my $mserv (@_) {
-    print "Deploying $mserv\n";
-    # Clone or update the module
-    clonetag $mserv;
-    # Now get any dependencies
-    getdeps $mserv;
-  }
- 
+  prepare_service($LOGFILE,$KB_DC,@_);
   chdir("$KB_DC");
 
   print "Starting bootstrap $KB_DC\n";
