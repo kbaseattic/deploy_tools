@@ -20,7 +20,6 @@ my $command=shift @ARGV;
 switch ($command) {
   case /mkvm/ {
     vmpreflight();
-    print Dumper($cfg);
     configure_vm();
   }
   case /boot/ {
@@ -53,10 +52,10 @@ switch ($command) {
 
 sub vmpreflight {
   # Check that group exist
-  if (system("lsdef -t group ".$cfg->{global}->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
-    print "Add group\n";
-    mysystem("mkdef -t group $cfg->{global}->{xcatgroup}");
-  }
+  #if (system("lsdef -t group ".$cfg->{global}->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
+  #  print "Add group\n";
+  #  mysystem("mkdef -t group $cfg->{global}->{xcatgroup}");
+  #}
 
   # Get a list of configured services and used nodes
   open(L,"nodels $cfg->{global}->{xcatgroup} nodelist.comments|");
