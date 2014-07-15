@@ -113,6 +113,7 @@ sub config_host{
 
   my $mem=$cfg->{services}->{$service}->{mem};
   my $cores=$cfg->{services}->{$service}->{cores};
+  $cfg->{services}->{$service}->{host}=$host;
 
   print "Configuring $host for $service with $mem and $cores cores\n";
   mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
