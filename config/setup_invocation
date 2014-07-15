@@ -1,0 +1,38 @@
+#!/usr/bin/env perl 
+
+# TODO: Change things to run as non-root
+
+use lib '../perl';
+use KBDeploy;
+use strict;
+
+my $cfg=read_config("../cluster.ini",'global');
+
+my $LOGFILE="/tmp/deploy.log";
+my $KB_DC=$cfg->{'global'}->{devcontainer};
+
+stop_service('invocation');
+
+my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam');
+
+deploy_service('skipdeploy',@sl);
+
+
+chdir($KB_DC.'/modules');
+opendir(my $dh, './') || die "can't opendir ./: $!";
+my @modules = grep { ! /^\./ && -d "./$_" } readdir($dh);
+closedir $dh;
+
+for my $_ (@modules){
+    print "$_\n";
+    next if /auth_service/;
+    next if /kb_model_seed/;
+    chdir("$KB_DC/modules/$_");
+    my $target='deploy-client';
+    $target='deploy' if (/auth/);
+    mysystem(". $KB_DC/user-env.sh;make $target >> $LOGFILE 2>&1");
+}
+chdir "$KB_DC/modules/invocation";
+mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
+
+start_service('invocation');
