@@ -3,7 +3,6 @@ package KBDeploy;
 use strict;
 use warnings;
 use Config::IniFiles;
-use Switch;
 use Data::Dumper;
 
 use Carp;
@@ -229,7 +228,7 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
-      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/stop_service");
+      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/stop_service | echo Ignore");
     }
   }
 }
@@ -274,14 +273,15 @@ sub deploy_service {
   # Fix up setup
   mysystem("$basedir/config/fixup_dc");
 
+  # Copy the deployment config from the reference copy
+  mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
+
   print "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make >> $LOGFILE 2>&1");
 
   print "Running make deploy\n";
   mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
 
-  # Copy the deployment config from the reference copy
-  mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
 }
 
 sub mkdocs {
