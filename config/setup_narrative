@@ -18,11 +18,11 @@ chdir "/kb" or die "Unable to chdir";
 KBDeploy::clonetag('bootstrap') unless -e "/kb/bootstrap";
 
 mysystem("apt-get install -y libcurl4-gnutls-dev") unless -e "/usr/bin/curl-config";
-mysystem("apt-get install -y python-dev ncurses-dev");
-mysystem("pip install -r bootstrap/kb_python_runtime/python-pip-list-narrative");
+mysystem("apt-get install -y python-dev ncurses-dev") unless -e "/usr/include/ncurses.h";
+#mysystem("pip install -r bootstrap/kb_python_runtime/python-pip-list-narrative");
 
 
-mysystem("apt-get install -y python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose");
+mysystem("apt-get install -y python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose") unless -e "/usr/bin/ipython";
 
 
 mysystem("apt-get -y install python-software-properties") unless -e "/usr/bin/add-apt-repository";
@@ -31,18 +31,19 @@ if ( ! -e "/usr/sbin/nginx" ){
   mysystem("apt-get update ; apt-get install -y nginx");
 }
 
-mysystem("apt-get install lua5.1");
-mysystem("apt-get install luarocks");
-mysystem("apt-get install liblua5.1-0");
-mysystem("apt-get install liblua5.1-0-dev");
-mysystem("apt-get install liblua5.1-json");
-mysystem("apt-get install liblua5.1-lpeg2");
-mysystem("luarocks install luasocket");
-mysystem("luarocks install luajson");
-mysystem("luarocks install penlight");
-mysystem("luarocks install lua-spore");
-mysystem("luarocks install luacrypto");
-
+if ( ! -e "/usr/bin/lua5.1" ){
+  mysystem("apt-get install lua5.1");
+  mysystem("apt-get install luarocks");
+  mysystem("apt-get install liblua5.1-0");
+  mysystem("apt-get install liblua5.1-0-dev");
+  mysystem("apt-get install liblua5.1-json");
+  mysystem("apt-get install liblua5.1-lpeg2");
+  mysystem("luarocks install luasocket");
+  mysystem("luarocks install luajson");
+  mysystem("luarocks install penlight");
+  mysystem("luarocks install lua-spore");
+  mysystem("luarocks install luacrypto");
+}
 
 mkdir "/kb/dev" unless -e "/kb/dev";
 mkdir "/kb/deployment" unless -e "/kb/deployment";
@@ -53,6 +54,6 @@ mysystem("yes|/bin/sh narrative/docker/lua-dependencies.txt") unless -e "/usr/lo
 
 KBDeploy::clonetag('ui-common') unless -e "/kb/dev/ui-common";
 
-#mysystem("cd ui-common;./deployFunctionalSite.sh;cd ..");
+mysystem("cd ui-common;./deployFunctionalSite.sh;cd ..");
 
 
