@@ -3,3 +3,4 @@ cluster.ini
 config/mongodb-keyfile
 config/ssl/
 deployment.cfg
+config/gitkey
