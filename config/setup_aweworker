@@ -1,0 +1,37 @@
+#!/usr/bin/env perl 
+
+# TODO: Change things to run as non-root
+
+use lib '../perl';
+use KBDeploy;
+use strict;
+use Config::IniFiles;
+
+my $cfg=read_config("../cluster.ini",'global');
+
+my $LOGFILE="/tmp/deploy.log";
+my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
+my $KB_DC=$cfg->{'global'}->{devcontainer};
+
+if ( -e "$KB_DEPLOY/services/awe_service/stop_service"){
+  mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/stop_aweclient | echo Ignore");
+}
+deploy_service('skipdeploy','awe_service');
+
+chdir($KB_DC.'/modules/awe_service');
+mysystem(". $KB_DC/user-env.sh;make deploy-awe-client > $LOGFILE 2>&1");
+
+my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
+
+# Fix up config
+my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+$mcfg->newval('Client','group',$cfg->{services}->{aweworker}->{'group'}) or die "Unable to set group";
+$mcfg->newval('Client','clientgroup_token',$cfg->{services}->{aweworker}->{'token'}) or die "Unable to set token";
+$mcfg->setval('Client','serverurl',$cfg->{services}->{aweworker}->{'serverurl'}) or die "Unabel to set serverurl";
+
+print "$file\n";
+$mcfg->WriteConfig($file) or die "Unable to write $file";
+
+mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclient");
+

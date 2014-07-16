@@ -252,6 +252,7 @@ sub deploy_service {
   my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
   my $KB_DC=$cfg->{$globaltag}->{devcontainer};
   my $KB_RT=$cfg->{$globaltag}->{runtime};
+  my $skipdeploy=0;
 
   # Extingush all traces of previous deployments
   my $d=`date +%s`;
@@ -265,6 +266,10 @@ sub deploy_service {
   # Create the dev container and some common dependencies
   deploy_devcontainer($LOGFILE) unless ( -e "$KB_DEPLOY/bin/compile_typespec" );
 
+  if ($_[0] eq 'skipdeploy') {
+    shift @_;
+    $skipdeploy=1; 
+  }
   prepare_service($LOGFILE,$KB_DC,@_);
   chdir("$KB_DC");
 
@@ -279,8 +284,10 @@ sub deploy_service {
   print "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make >> $LOGFILE 2>&1");
 
-  print "Running make deploy\n";
-  mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
+  if (! $skipdeploy){
+    print "Running make deploy\n";
+    mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
+  }
 
 }
 

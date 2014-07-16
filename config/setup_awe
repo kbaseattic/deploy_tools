@@ -17,10 +17,11 @@ my @sl=myservices($me);
 
 stop_service(@sl);
 
-deploy_service(@sl);
+#deploy_service(@sl);
 
 my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
 
+symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
 # Fix up config
 
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
@@ -34,6 +35,29 @@ $mcfg->setval('Admin','email','scanon@lbl.gov');
 # Reuse mongo password
 $mcfg->setval('Admin','secretkey',$cfg->{services}->{awe}->{'mongodb-pwd'});
 
+$mcfg->setval('External','site-url','https://next.kbase.us/services/docs/awe');
+$mcfg->setval('External','api-url','https://next.kbase.us/services/awe');
+
+
+# Adjust some settings
+for my $param ('read','write','create-user'){
+  $mcfg->setval('Anonymous',$param,'false');
+}
+for my $param ('delete','cg_read','cg_write','cg_delete'){
+  $mcfg->newval('Anonymous',$param,'false');
+}
 $mcfg->WriteConfig($file);
+
+my $js="/mnt/awe/site/js/config.js";
+mysystem("/bin/cp $js $js.orig");
+open(JSO, "$js.orig") or die "Unable to open $js.orig";
+open(JSN, "> $js");
+while(<JSO>){
+  #s/:7080/$cfg->{services}->{awe}->{'api-url'}/;
+  s/ ":/ "$cfg->{services}->{awe}->{'api-url'}/;
+  print JSN;
+}
+#    "workflow_ip": ":7080/awf",
+#
 
 start_service(@sl);
