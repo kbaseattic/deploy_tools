@@ -9,16 +9,11 @@ server {
 	# Make site accessible from http://localhost/
 	server_name localhost;
 
+        # TODO: Removed hard-coded reference to narrative
 	location / {
-		# First attempt to serve request as file, then
-		# as directory, then fall back to index.html
-		try_files $uri $uri/ /index.html;
+                proxy_pass http://next-narrative/;
 	}
         location /services {
-                root /kb/docs;
-                autoindex on;
-        }
-        location /labs {
                 root /kb/docs;
                 autoindex on;
         }
@@ -34,13 +29,6 @@ server {
 		root /usr/share;
 		autoindex off;
 	}
-
-        #location /services/search/ {
-        #        proxy_pass http://t51:7079/;
-        #}
-        #location /services/search-doc/ {
-        #        proxy_pass http://t51:7080/;
-        #}
 
         #%INCLUDE%
 
@@ -70,15 +58,9 @@ server {
         server_name localhost;
 
         location / {
-                # First attempt to serve request as file, then
-                # as directory, then fall back to index.html
-                try_files $uri $uri/ /index.html;
+                proxy_pass http://next-narrative/;
         }
         location /services {
-                root /kb/docs;
-                autoindex on;
-        }
-        location /labs {
                 root /kb/docs;
                 autoindex on;
         }
@@ -94,16 +76,6 @@ server {
                 root /usr/share;
                 autoindex off;
         }
-
-        #location /services/search-api/ {
-        #       add_header Access-Control-Allow-Origin *;
-        #       proxy_pass http://t51:7078/;
-        #}
-
-        #location /solr {
-        #        add_header Access-Control-Allow-Origin *;
-        #        proxy_pass http://t51:7077/;
-        #}
 
 	#%SSLINCLUDE%
 }
