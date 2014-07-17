@@ -62,15 +62,18 @@ sub vmpreflight {
   while(<L>){
     chomp;
     my ($host,$service)=split /: /;
-    $cfg->{services}->{$service}->{host}=$host;
-    print "Found $service on $host\n" if $debug;
-    $cfg->{nodes}->{used}->{$host}=1;
+    if ($service ne ''){
+      $cfg->{services}->{$service}->{host}=$host;
+      print "Found $service on $host\n" if $debug;
+      $cfg->{nodes}->{used}->{$host}=1;
+    }
   }
 
   # Create a list of nodes that can be used
-  for (my $i=1;$i<$cfg->{global}->{maxnodes};$i++){
+  for (my $i=1;$i<=$cfg->{global}->{maxnodes};$i++){
     my $name=sprintf "%s%02d",$cfg->{global}->{basename},$i;
     if (! defined $cfg->{nodes}->{used}->{$name}){
+      print "Available: $name\n" if $debug;
       push @{$cfg->{nodes}->{available}},$name;
     }
   }
@@ -115,10 +118,12 @@ sub config_host{
   $cfg->{services}->{$service}->{host}=$host;
 
   print "Configuring $host for $service with $mem and $cores cores\n";
-  mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
+  if (system("nodels $host|grep -c $host > /dev/null") eq 1 ){
+    mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
+  }
   mysystem("nodech $host nodelist.comments=$service");
   my $alias=$cfg->{global}->{basename}."-".$service;
-  mysystem("chdef $host vmmemory=$mem vmcpus=$cores hostnames=$alias");
+  mysystem("nodech $host vm.memory=$mem vm.cpus=$cores hosts.hostnames=$alias");
   mysystem("clonevm $host -b ".$cfg->{global}->{baseimage});
   if (defined $cfg->{services}->{$service}->{disk}){
     foreach my $size (split /,/,$cfg->{services}->{$service}->{disk}){
