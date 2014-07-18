@@ -1,16 +1,11 @@
 #!/usr/bin/env perl 
-
-use lib '../perl';
-use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 my $debug=0;
-
-my $cfgfile="../cluster.ini";
-my $gtag='global';
-
-my $cfg=read_config($cfgfile,$gtag);
 
 mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
 system("dpkg -l |grep -c  python-software-properties > /dev/null");

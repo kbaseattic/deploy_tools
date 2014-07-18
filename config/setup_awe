@@ -1,13 +1,12 @@
 #!/usr/bin/env perl 
 
-# TODO: Change things to run as non-root
-
-use lib '../perl';
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 use Config::IniFiles;
 
-my $cfg=read_config("../cluster.ini",'global');
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
 
 my $me=`hostname`;
@@ -35,8 +34,8 @@ $mcfg->setval('Admin','email','scanon@lbl.gov');
 # Reuse mongo password
 $mcfg->setval('Admin','secretkey',$cfg->{services}->{awe}->{'mongodb-pwd'});
 
-$mcfg->setval('External','site-url','https://next.kbase.us/services/docs/awe');
-$mcfg->setval('External','api-url','https://next.kbase.us/services/awe');
+$mcfg->setval('External','site-url',$cfg->{services}->{awe}->{'site-url'});
+$mcfg->setval('External','api-url',$cfg->{services}->{awe}->{'api-url'});
 
 
 # Adjust some settings

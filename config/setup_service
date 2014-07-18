@@ -2,11 +2,12 @@
 
 # TODO: Change things to run as non-root
 
-use lib '../perl';
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
-my $cfg=read_config("../cluster.ini",'global');
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
 
 my $me=`hostname`;
@@ -14,6 +15,7 @@ chomp $me;
 
 
 my @sl=myservices($me);
+exit unless scalar(@sl);
 
 mkdocs(@sl);
 exit if -e '/kb/deployment';

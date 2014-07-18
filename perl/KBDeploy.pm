@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Config::IniFiles;
 use Data::Dumper;
+use FindBin;
 
 use Carp;
 use Exporter;
@@ -22,7 +23,8 @@ our %repo;
 
 # TODO: sometimes the service block name is different than the repo name.  Change this to a function.
 our %reponame;
-our $basedir="/root/dt";
+our $basedir=$FindBin::Bin;
+$basedir=~s/config$//;
 
 # Defaults and paths
 #my $KB_DC="$KB_BASE/dev_container";
@@ -33,8 +35,9 @@ our $basedir="/root/dt";
 #$KB_DC=$cfg->{$gtag}->{devcontainer} if (defined $cfg->{$gtag}->{devcontainer});
 #$KB_RT=$cfg->{$gtag}->{runtime} if (defined $cfg->{$gtag}->{runtime});
 
-
-$ENV{'GIT_SSH'}=$basedir."/config/gitssh";
+if (-e "$basedir/config/gitssh" ){
+  $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
+}
 
 sub maprepos {
   for my $s (keys %{$cfg->{services}}){
@@ -90,9 +93,7 @@ sub read_config {
      }
    }
    maprepos();
-  $basedir=$cfg->{$globaltag}->{dtdir};
-  $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
-  return $cfg;
+   return $cfg;
 }
 
 sub update_config {

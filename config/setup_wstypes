@@ -1,0 +1,3 @@
+#!/bin/sh
+
+mongorestore --db wstypes --username mongoadmin --authenticationDatabase admin ./workspace_types/ -p

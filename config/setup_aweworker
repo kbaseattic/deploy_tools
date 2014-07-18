@@ -1,13 +1,11 @@
 #!/usr/bin/env perl 
 
-# TODO: Change things to run as non-root
-
-use lib '../perl';
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
-use Config::IniFiles;
 
-my $cfg=read_config("../cluster.ini",'global');
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
 my $LOGFILE="/tmp/deploy.log";
 my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
@@ -35,3 +33,11 @@ $mcfg->WriteConfig($file) or die "Unable to write $file";
 
 mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclient");
 
+
+# TODO
+#
+# export AUTH='Authorization: OAuth $TOK
+#
+#curl -X POST -H "$AUTH" http://next-awe:7107/cgroup/next
+#
+# Grab output and stuff in config

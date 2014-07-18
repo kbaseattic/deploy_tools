@@ -1,13 +1,13 @@
 #!/usr/bin/perl
 
-use lib '../perl';
-use Data::Dumper;
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
 my $debug=0;
 
-my $cfgfile="../cluster.ini";
+my $cfgfile="$FindBin::Bin/../cluster.ini";
 my $gtag='global';
 
 my $cfg=read_config($cfgfile,$gtag);
