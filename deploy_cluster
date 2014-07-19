@@ -118,7 +118,7 @@ sub config_host{
   $cfg->{services}->{$service}->{host}=$host;
 
   print "Configuring $host for $service with $mem and $cores cores\n";
-  if (system("nodels $host|grep -c $host > /dev/null") eq 1 ){
+  if (system("nodels $host > /dev/null 2>&1") eq 1 ){
     mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
   }
   mysystem("nodech $host nodelist.comments=$service");

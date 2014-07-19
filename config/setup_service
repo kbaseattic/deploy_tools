@@ -18,7 +18,7 @@ my @sl=myservices($me);
 exit unless scalar(@sl);
 
 mkdocs(@sl);
-exit if -e '/kb/deployment';
+exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
 stop_service(@sl);
 
