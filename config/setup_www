@@ -9,7 +9,7 @@ my $debug=0;
 my $nginxfile="/etc/nginx/sites-enabled/default";
 my $ngintemp=$FindBin::Bin."/nginx.tmpl";
 
-bootstrap if ($ARGV[0] eq 'bootstrap');
+bootstrap() if ($ARGV[0] eq 'bootstrap');
 
 mkdir "/kb" if ( ! -e "/kb/");
 mkdir "/kb/docs" if ( ! -e "/kb/docs");
@@ -35,6 +35,7 @@ sub printserv{
   foreach my $s (@{$cfg->{servicelist}}){
      my $sc=$cfg->{services}->{$s};
      next if $sc->{proxytype} eq 'skip';
+     next if $sc->{type} eq 'worker';
      #print "Service; $s\n";
      die "Port not defined for $s\n" if ! defined $sc->{port};
      if ($ssl){

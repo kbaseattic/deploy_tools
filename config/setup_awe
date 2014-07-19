@@ -8,58 +8,73 @@ use Config::IniFiles;
 
 exit if $ARGV[0] eq 'bootstrap';
 
-exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
-
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my $acfg=$cfg->{services}->{awe};
 
-my $me=`hostname`;
-chomp $me;
+if ($ARGV[0] eq '-f' || -e '/kb/deployment'){
+  stop_service('awe');
 
-my @sl=myservices($me);
+  deploy_service('awe');
 
-stop_service(@sl);
+  symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
 
-deploy_service(@sl);
+  my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
+  fix_config($file,$acfg);
 
-my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
+  fix_configjs("/mnt/awe/site/js/config.js");
 
-symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
+  start_service('awe');
+}
+
+# TODO: Create client groups
+
+
+sub fix_config {
+  my $file=shift;
+  my $acfg=shift;
 # Fix up config
 
-my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+  my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
-$mcfg->setval('Mongodb','hosts',$cfg->{services}->{awe}->{'mongodb-host'});
-$mcfg->newval('Mongodb','database',$cfg->{services}->{awe}->{'mongodb-database'});
-$mcfg->newval('Mongodb','user',$cfg->{services}->{awe}->{'mongodb-user'});
-$mcfg->newval('Mongodb','password',$cfg->{services}->{awe}->{'mongodb-pwd'});
-$mcfg->setval('Ports','api-port',$cfg->{services}->{awe}->{'port'});
-$mcfg->setval('Admin','email','scanon@lbl.gov');
+# Update Mongo Params
+  $mcfg->setval('Mongodb','hosts',$acfg->{'mongodb-host'});
+  $mcfg->newval('Mongodb','database',$acfg->{'mongodb-database'});
+  $mcfg->newval('Mongodb','user',$acfg->{'mongodb-user'});
+  $mcfg->newval('Mongodb','password',$acfg->{'mongodb-pwd'});
+
+#Update Ports
+  $mcfg->setval('Ports','api-port',$acfg->{'port'});
+  $mcfg->setval('Admin','email','scanon@lbl.gov');
 # Reuse mongo password
-$mcfg->setval('Admin','secretkey',$cfg->{services}->{awe}->{'mongodb-pwd'});
+  $mcfg->setval('Admin','secretkey',$acfg->{'mongodb-pwd'});
 
-$mcfg->setval('External','site-url',$cfg->{services}->{awe}->{'site-url'});
-$mcfg->setval('External','api-url',$cfg->{services}->{awe}->{'api-url'});
+# Update urls
+  $mcfg->setval('External','site-url',$acfg->{'site-url'});
+  $mcfg->setval('External','api-url',$acfg->{'api-url'});
 
 
 # Adjust some settings
-for my $param ('read','write','create-user'){
-  $mcfg->setval('Anonymous',$param,'false');
-}
-for my $param ('delete','cg_read','cg_write','cg_delete'){
-  $mcfg->newval('Anonymous',$param,'false');
-}
-$mcfg->WriteConfig($file);
+  for my $param ('read','write','create-user'){
+    $mcfg->setval('Anonymous',$param,'false');
+  }
+  for my $param ('delete','cg_read','cg_write','cg_delete'){
+    $mcfg->newval('Anonymous',$param,'false');
+  }
+  $mcfg->WriteConfig($file);
 
-my $js="/mnt/awe/site/js/config.js";
-mysystem("/bin/cp $js $js.orig");
-open(JSO, "$js.orig") or die "Unable to open $js.orig";
-open(JSN, "> $js");
-while(<JSO>){
-  #s/:7080/$cfg->{services}->{awe}->{'api-url'}/;
-  s/ ":/ "$cfg->{services}->{awe}->{'api-url'}/;
-  print JSN;
 }
-#    "workflow_ip": ":7080/awf",
+
+sub fix_configjs {
+  my $js=shift;
+# Fix up config.js in the site area
 #
-
-start_service(@sl);
+  mysystem("/bin/cp $js $js.orig");
+  open(JSO, "$js.orig") or die "Unable to open $js.orig";
+  open(JSN, "> $js");
+  while(<JSO>){
+    my $apiurl=$acfg->{'api-url'};
+    #s/:7080/$apiurl/;
+    s/ ":/ "$apiurl/;
+    print JSN;
+  }
+}

@@ -31,7 +31,6 @@ $mcfg->newval('Client','clientgroup_token',$cfg->{services}->{aweworker}->{'toke
 $mcfg->setval('Client','serverurl',$cfg->{services}->{aweworker}->{'serverurl'}) or die "Unable to set serverurl";
 $mcfg->setval('Client','supported_apps','*');
 
-print "$file\n";
 $mcfg->WriteConfig($file) or die "Unable to write $file";
 
 mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclient");
