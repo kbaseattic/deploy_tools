@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS Handle (
         created_by      varchar(256),
         creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (id)
-); 
+);

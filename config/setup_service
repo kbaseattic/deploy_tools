@@ -1,4 +1,4 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 
 # TODO: Change things to run as non-root
 
@@ -6,6 +6,8 @@ use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
+
+exit if $ARGV[0] eq 'bootstrap';
 
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 

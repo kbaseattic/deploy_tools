@@ -1,16 +1,18 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+exit if $ARGV[0] eq 'bootstrap';
+
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
 my $me=`hostname`;
 chomp $me;
 
-exit if -e '/kb/deployment';
+exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
 my @sl=myservices($me);
 
