@@ -16,7 +16,7 @@ my @sl=myservices($me);
 
 stop_service(@sl);
 
-#deploy_service(@sl);
+deploy_service(@sl);
 
 my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
 

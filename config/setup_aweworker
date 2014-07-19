@@ -14,7 +14,7 @@ my $KB_DC=$cfg->{'global'}->{devcontainer};
 if ( -e "$KB_DEPLOY/services/awe_service/stop_service"){
   mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/stop_aweclient | echo Ignore");
 }
-deploy_service('skipdeploy','awe_service');
+deploy_service('awe_service','workspace_deluxe','uploader','idserver');
 
 chdir($KB_DC.'/modules/awe_service');
 mysystem(". $KB_DC/user-env.sh;make deploy-awe-client > $LOGFILE 2>&1");
@@ -26,7 +26,8 @@ my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Co
 
 $mcfg->newval('Client','group',$cfg->{services}->{aweworker}->{'group'}) or die "Unable to set group";
 $mcfg->newval('Client','clientgroup_token',$cfg->{services}->{aweworker}->{'token'}) or die "Unable to set token";
-$mcfg->setval('Client','serverurl',$cfg->{services}->{aweworker}->{'serverurl'}) or die "Unabel to set serverurl";
+$mcfg->setval('Client','serverurl',$cfg->{services}->{aweworker}->{'serverurl'}) or die "Unable to set serverurl";
+$mcfg->setval('Client','supported_apps','*');
 
 print "$file\n";
 $mcfg->WriteConfig($file) or die "Unable to write $file";
