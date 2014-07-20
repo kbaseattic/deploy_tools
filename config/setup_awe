@@ -11,7 +11,7 @@ exit if $ARGV[0] eq 'bootstrap';
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 my $acfg=$cfg->{services}->{awe};
 
-if ($ARGV[0] eq '-f' || -e '/kb/deployment'){
+if ($ARGV[0] eq '-f' || ! -e '/kb/deployment'){
   stop_service('awe');
 
   deploy_service('awe');

@@ -229,7 +229,7 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
-      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/stop_service | echo Ignore");
+      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/stop_service || echo Ignore");
     }
   }
 }
