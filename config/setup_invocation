@@ -16,7 +16,11 @@ my $KB_DC=$cfg->{'global'}->{devcontainer};
 
 stop_service('invocation');
 
-my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam');
+my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'trees', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'meme', 'networks','CoExpression', 'KBaseExpression');
+
+#m5nr
+#uploader
+#search
 
 deploy_service('skipdeploy',@sl);
 
@@ -39,3 +43,7 @@ chdir "$KB_DC/modules/invocation";
 mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
 
 start_service('invocation');
+
+my $target=$cfg->{'global'}->{deploydir}."/services/invocation";
+#Need to test
+#mysystem("sed -i 's/\/\/.*\/services\/invocation/\/\/next.kbase.us\/services\/invocation/' $target/webroot/Iris/iris.html");
