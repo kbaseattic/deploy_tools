@@ -19,7 +19,12 @@ our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_ser
 
 our $cfg;
 our $globaltag;
+# repo is hash that points to the git repo.  It should work for both the
+# service name in the config file as well as the git repo name
 our %repo;
+# This makes it easy to map from a git repo name to a service
+# i.e.  user_and_job_state -> UserAndJobState
+our %reponame2service;
 
 # TODO: sometimes the service block name is different than the repo name.  Change this to a function.
 our %reponame;
@@ -31,9 +36,9 @@ $basedir=~s/config$//;
 #my $KB_RT="$KB_BASE/runtime";
 #my $MAKE_OPTIONS=$ENV{"MAKE_OPTIONS"};
 #
-#$KB_DEPLOY=$cfg->{$gtag}->{deploydir} if (defined $cfg->{$gtag}->{deploydir});
-#$KB_DC=$cfg->{$gtag}->{devcontainer} if (defined $cfg->{$gtag}->{devcontainer});
-#$KB_RT=$cfg->{$gtag}->{runtime} if (defined $cfg->{$gtag}->{runtime});
+#$KB_DEPLOY=$cfg->{$globaltag}->{deploydir} if (defined $cfg->{$globaltag}->{deploydir});
+#$KB_DC=$cfg->{$globaltag}->{devcontainer} if (defined $cfg->{$globaltag}->{devcontainer});
+#$KB_RT=$cfg->{$globaltag}->{runtime} if (defined $cfg->{$globaltag}->{runtime});
 
 if (-e "$basedir/config/gitssh" ){
   $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
@@ -42,15 +47,14 @@ if (-e "$basedir/config/gitssh" ){
 sub maprepos {
   for my $s (keys %{$cfg->{services}}){
   #
-    $repo{$s}=$cfg->{$globaltag}->{repobase}."/".$s;
-    if (defined $cfg->{services}->{$s}->{giturl}){
-        $repo{$s}=$cfg->{services}->{$s}->{giturl};
-    }
+    $repo{$s}=$cfg->{services}->{$s}->{giturl};
+    die "Undefined giturl for $s" unless defined $repo{$s};
     my $reponame=$repo{$s};
     $reponame=~s/.*\///;
     # Provide the name for the both the service name and repo name
     $repo{$reponame}=$repo{$s};
     $reponame{$s}=$reponame;
+    $reponame2service{$reponame}=$s;
   }
 }
 
@@ -84,6 +88,7 @@ sub read_config {
        #$cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
        $cfg->{services}->{$section}->{urlname}=$section;
        $cfg->{services}->{$section}->{basedir}=$section;
+       $cfg->{services}->{$section}->{giturl}=$cfg->{$globaltag}->{repobase}."/".$section;
        foreach ($mcfg->Parameters($section)){
          $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
        }
@@ -142,6 +147,13 @@ sub clonetag {
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
+  # Save the stats
+  my $hash=`cd $package;git log --pretty='%H' -n 1`;
+  chomp $hash;
+  my $hf=$cfg->{$globaltag}->{devcontainer}."/".$cfg->{$globaltag}->{hashfile};
+  open GH,">> $hf" or die "Unable to create $hf\n";
+  print GH "$reponame2service{$package} $repo{$package} $hash\n";
+  close GH;
 }
 
 # Recursively get dependencies
@@ -248,6 +260,43 @@ sub prepare_service {
   }
 }
 
+sub readhashes {
+  my $f=shift;
+  open(H,$f);
+  while(<H>){
+    chomp;
+    my ($s,$url,$hash)=split;
+    $cfg->{services}->{$s}->{hash}=$hash;
+    my $confurl=$cfg->{services}->{$s}->{giturl};
+    print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
+    print STDERR "Warning: $confurl vs $url\n" if $confurl ne $url;
+    $cfg->{services}->{$s}->{hash}=$hash;
+    $cfg->{services}->{$s}->{giturl}=$url;
+  }
+  close H;
+}
+
+sub redeploy_service {
+  my $tagfile=shift; 
+
+  die unless -e $tagfile;
+  readhashes($tagfile);
+# Check hashes
+
+  my $hf=$cfg->{$globaltag}->{devcontainer}."/".$cfg->{$globaltag}->{hashfile};
+  if (! open(H,"$hf")){
+    print STDERR "Missing hash file $hf\n";
+    return 1;
+  }
+  while(<H>){
+    chomp;
+    my ($s,$url,$hash)=split;
+    return 1 if $url ne $cfg->{services}->{$s}->{giturl};
+  }
+ 
+  return 0;
+}
+
 sub deploy_service {
   my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
@@ -290,6 +339,16 @@ sub deploy_service {
     mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
   }
 
+}
+
+sub gittag {
+  my $service=shift;
+  
+  my $repo=$repo{$service};
+  my $tag=`git ls-remote $repo HEAD`;
+  chomp $tag;
+  $tag=~s/\tHEAD//;
+  return $tag;
 }
 
 sub mkdocs {
