@@ -5,19 +5,25 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+# This is the name for now, as this is what the Lua provisioner looks for to fire up a Narrative.
+my $NAR_NAME="kbase/narrative";
+
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
 
 mkdir "/kb" unless -e "/kb";
+mkdir "/kb/dev" unless -e "/kb/dev";
+chdir "/kb/dev";
 
 if ($ARGV[0] eq 'bootstrap' ){
+  KBDeploy::clonetag('bootstrap');
   bootstrap();
   exit;
 }
 
-mkdir "/kb/dev" unless -e "/kb/dev";
+exit unless $ARGV[0] eq '-f';
 mkdir "/kb/deployment" unless -e "/kb/deployment";
-chdir "/kb/dev";
+KBDeploy::clonetag('bootstrap') unless -e "/kb/dev/bootstrap";
 KBDeploy::clonetag('narrative') unless -e "/kb/dev/narrative";
 KBDeploy::clonetag('ui-common') unless -e "/kb/dev/ui-common";
 
@@ -42,6 +48,12 @@ mysystem('grep -rl  dev07.berkeley.kbase.us/search /kb/deployment/ui-common 2>/d
 
 # Now for the narrative url
 mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/next04.berkeley.kbase.us/"');
+
+# Build docker
+chdir "/kb/dev/narrative" or die "Unable to change dir";
+mysystem('grep -rl //kbase.us/services /kb/dev/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" || echo "Done" ');
+# Now for the narrative url
+mysystem("sh ./buildNarrativeContainer.sh");
 
 
 sub bootstrap {
