@@ -20,16 +20,16 @@ my $command=shift @ARGV;
 switch ($command) {
   case /mkvm/ {
     vmpreflight();
-    configure_vm();
+    configure_vms();
   }
   case /boot/ {
     boot_nodes();
   }
-  case /syncnodes/ {
-    sync_nodes();
+  case /syncdt/ {
+    sync_dt();
   }
-  case /confnodes/ {
-    config_nodes();
+  case /deploy/ {
+    deploy_services(@ARGV);
   }
   case /updatehostassignments/ {
      vmpreflight();
@@ -43,8 +43,11 @@ switch ($command) {
   case /start$/ {
      start();
   }
+  case /mkhashfile$/ {
+     mkhashfile();
+  }
   else {
-    printf stderr "Usage: $0 <mkvm|boot|syncnodes|confnodes|start>\n";
+    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start|mkhashfile>\n";
     exit 1;
   }
 }
@@ -79,7 +82,10 @@ sub vmpreflight {
   }
 }
 
-
+#
+# Boot all nodes and wait for them to come up.
+# TODO: add a timeout
+#
 sub boot_nodes {
   mysystem("rpower $cfg->{global}->{xcatgroup} on > /dev/null");
   while(system("nodestat $cfg->{global}->{xcatgroup}|grep -vc sshd > /dev/null") eq 0){
@@ -88,7 +94,10 @@ sub boot_nodes {
   print "All nodes up\n";
 }
 
-sub configure_vm {
+#
+# For each service, see if there is a host assigned.  If not, create it
+#
+sub configure_vms {
   foreach my $service (@{$cfg->{servicelist}}){
     #next if $service eq $globaltag;
     print "Service: $service\n";
@@ -108,7 +117,9 @@ sub configure_vm {
   mysystem("makedhcp $cfg->{global}->{xcatgroup}");
 }
 
-
+#
+# Configure a host for a service
+#
 sub config_host{
   my $host=shift;
   my $service=shift;
@@ -118,7 +129,10 @@ sub config_host{
   $cfg->{services}->{$service}->{host}=$host;
 
   print "Configuring $host for $service with $mem and $cores cores\n";
-  if (system("nodels $host > /dev/null 2>&1") eq 1 ){
+  my $ct=`nodels $cfg->{global}->{xcatgroup} |grep -c $host`;
+  chomp $ct;
+  if ($ct eq 0 ){
+    print STDERR "Adding $host\n" if $debug;
     mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
   }
   mysystem("nodech $host nodelist.comments=$service");
@@ -133,9 +147,15 @@ sub config_host{
   KBDeploy::update_config($cfgfile,$service,'host',$host);
 }
 
-sub sync_nodes {
+#
+# Copy out deploy_tools
+# TODO: Replace with bootstrap process
+#
+sub sync_dt {
    # Push out the scripts
    my $xg=$cfg->{global}->{xcatgroup};
+   my $fl=join " ",@_;
+
    mysystem("xdsh $xg '[ -e $basedir ] || mkdir $basedir'");
    mysystem("xdcp $xg $0 $basedir/$0");
    mysystem("xdcp $xg $cfgfile $basedir/$cfgfile");
@@ -143,32 +163,54 @@ sub sync_nodes {
    mysystem("xdcp $xg -R config $basedir/");
 }
 
-sub config_nodes{
+# Propogate a list of files to the basedir on each node
+#
+sub sync_files {
+   my $xg=$cfg->{global}->{xcatgroup};
+   my $fl=join " ",@_;
+   mysystem("xdcp $xg $fl $basedir/") if $fl ne '';
+}
+
+#
+# Deploy service
+#
+sub deploy_services{
 
    vmpreflight();
-   sync_nodes();
-
+   my $hashfile=shift;
+   sync_files('cluster.ini',$hashfile);
+   $hashfile=~s/.*\/// if defined $hashfile;
+   print STDERR "Hasfile: $hashfile\n";
+   
    #Now run the local scripts
    for my $service (@{$cfg->{servicelist}}){
      my $script=$cfg->{$globaltag}->{setup};
      $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
      print "Runnig $script on $service\n";
-     mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script'");
+     mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
    }
 }
 
+#
+# See if things are running
+# TODO: Make this better
+#
 sub status{
    my $xg=$cfg->{global}->{xcatgroup};
    mysystem("xdsh $xg 'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$'");
 }
 
+# Run startservice on all nodes
 sub start{
    sync_nodes();
    my $xg=$cfg->{global}->{xcatgroup};
-   print "Here I am\n";
-   mysystem("xdsh next 'cd $basedir/;./$0 startservice'");
+
+   mysystem("xdsh $xg 'cd $basedir/;./$0 startservice'");
 }
 
+#
+# startservice is for a specific node
+#
 sub startservice{
   my $me=`hostname`;
   chomp $me;
@@ -177,4 +219,28 @@ sub startservice{
   my @sl=myservices($me);
 
   start_service(@sl);
+}
+
+#
+# Genereate tag
+#
+sub mkhashfile {
+  my $tagfile=shift;
+  if (! defined $tagfile){ 
+    my $ds=`date +%Y%m%d%H%M`;
+    chomp $ds;
+    $tagfile="tagfile.$ds";
+  }
+  my $out;
+  for my $service (keys %{$cfg->{services}}){
+    my $s=$cfg->{services}->{$service}; 
+    next if $s->{giturl} eq 'none';
+    my $tag=KBDeploy::gittag($service);
+    
+    $out.="$service $s->{giturl} $tag\n";
+  }
+  open TF,"> $tagfile" or die "Unable to create $tagfile\n";
+  print "$tagfile\n";
+  print TF $out;
+  close TF;
 }
