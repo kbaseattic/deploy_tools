@@ -60,6 +60,10 @@ sub maprepos {
 
 sub myservices {
   my $me=shift;
+  if (! defined $me || $me eq ''){
+    $me=`hostname`;
+    chomp $me;
+  }
   my @sl;
   for my $s (keys %{$cfg->{services}}){
     next unless defined $cfg->{services}->{$s}->{host};
@@ -125,7 +129,7 @@ sub mysystem {
 # Helper function to clone a module and checkout a tag.
 sub clonetag {
   my $package=shift;
-  my $mytag=shift;
+  my $mytag=$cfg->{services}->{$reponame2service{$package}}->{hash};
 
   $mytag="head" if ! defined $mytag; 
   $mytag=$cfg->{$globaltag}->{tag} if defined $cfg->{$globaltag}->{tag};
@@ -189,7 +193,7 @@ sub deploy_devcontainer {
   my $LOGFILE=shift;
   my $KB_DC=$cfg->{$globaltag}->{devcontainer};
   my $KB_RT=$cfg->{$globaltag}->{runtime};
-  my $MAKE_OPTIONS="";
+  my $MAKE_OPTIONS=$cfg->{$globaltag}->{'make-options'};
 
   my $KB_BASE=$KB_DC;
   # Strip off last
@@ -292,6 +296,7 @@ sub redeploy_service {
     chomp;
     my ($s,$url,$hash)=split;
     return 1 if $url ne $cfg->{services}->{$s}->{giturl};
+    return 1 if $hash ne $cfg->{services}->{$s}->{hash};
   }
  
   return 0;
@@ -302,6 +307,7 @@ sub deploy_service {
   my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
   my $KB_DC=$cfg->{$globaltag}->{devcontainer};
   my $KB_RT=$cfg->{$globaltag}->{runtime};
+  my $MAKE_OPTIONS=$cfg->{$globaltag}->{'make-options'};
   my $skipdeploy=0;
 
   # Extingush all traces of previous deployments
@@ -332,11 +338,11 @@ sub deploy_service {
   mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
 
   print "Running make\n";
-  mysystem(". $KB_DC/user-env.sh;make >> $LOGFILE 2>&1");
+  mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
   if (! $skipdeploy){
     print "Running make deploy\n";
-    mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
+    mysystem(". $KB_DC/user-env.sh;make deploy $MAKE_OPTIONS >> $LOGFILE 2>&1");
   }
 
 }
