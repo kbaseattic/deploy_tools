@@ -213,7 +213,7 @@ sub deploy_devcontainer {
 
   # Fix up setup
   mysystem("$basedir/config/fixup_dc");
- 
+
   print "Running Make in dev_container\n";
   mysystem(". ./user-env.sh;make $MAKE_OPTIONS >> $LOGFILE");
 
@@ -343,7 +343,7 @@ sub deploy_service {
 
   return if $target eq '';
   print "Running make $target\n";
-  mysystem(". $KB_DC/user-env.sh;make $target >> $LOGFILE 2>&1");
+  mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
 }
 
