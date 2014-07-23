@@ -137,7 +137,7 @@ sub clonetag {
 
   print "- Cloning $package\n";
   if ( -e $package ) {
-    chdir $package;
+    chdir $package or die "Unable to cd";
     # Make sure we are on head
     mysystem("git checkout master  > /dev/null 2>&1");
     mysystem("git pull  > /dev/null 2>&1");
@@ -198,8 +198,10 @@ sub deploy_devcontainer {
   my $KB_BASE=$KB_DC;
   # Strip off last
   $KB_BASE=~s/.dev_container//;
-  mkdir $KB_BASE;
-  chdir $KB_BASE;
+  if ( ! -e $KB_BASE ){
+    mkdir $KB_BASE or die "Unable to mkkdir $KB_BASE";
+  }
+  chdir $KB_BASE or die "Unable to cd $KB_BASE";
   clonetag "dev_container";
   chdir "dev_container/modules";
 
@@ -308,7 +310,7 @@ sub deploy_service {
   my $KB_DC=$cfg->{$globaltag}->{devcontainer};
   my $KB_RT=$cfg->{$globaltag}->{runtime};
   my $MAKE_OPTIONS=$cfg->{$globaltag}->{'make-options'};
-  my $skipdeploy=0;
+  my $target=shift;
 
   # Extingush all traces of previous deployments
   my $d=`date +%s`;
@@ -322,10 +324,6 @@ sub deploy_service {
   # Create the dev container and some common dependencies
   deploy_devcontainer($LOGFILE) unless ( -e "$KB_DEPLOY/bin/compile_typespec" );
 
-  if ($_[0] eq 'skipdeploy') {
-    shift @_;
-    $skipdeploy=1; 
-  }
   prepare_service($LOGFILE,$KB_DC,@_);
   chdir("$KB_DC");
 
@@ -334,16 +332,18 @@ sub deploy_service {
   # Fix up setup
   mysystem("$basedir/config/fixup_dc");
 
+  if ( ! -e $KB_DEPLOY ){
+    mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";
+  }
   # Copy the deployment config from the reference copy
   mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
 
   print "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
-  if (! $skipdeploy){
-    print "Running make deploy\n";
-    mysystem(". $KB_DC/user-env.sh;make deploy $MAKE_OPTIONS >> $LOGFILE 2>&1");
-  }
+  return if $target eq '';
+  print "Running make $target\n";
+  mysystem(". $KB_DC/user-env.sh;make $target >> $LOGFILE 2>&1");
 
 }
 
