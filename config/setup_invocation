@@ -22,7 +22,7 @@ my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDis
 #uploader
 #search
 
-deploy_service('skipdeploy',@sl);
+deploy_service('',@sl);
 
 
 chdir($KB_DC.'/modules');

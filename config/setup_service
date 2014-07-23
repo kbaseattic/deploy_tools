@@ -24,6 +24,6 @@ exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
 stop_service(@sl);
 
-deploy_service(@sl);
+deploy_service('deploy',@sl);
 
 start_service(@sl);

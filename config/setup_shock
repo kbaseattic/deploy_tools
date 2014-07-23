@@ -18,7 +18,7 @@ my @sl=myservices($me);
 
 stop_service(@sl);
 
-deploy_service(@sl);
+deploy_service('deploy',@sl);
 
 my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 

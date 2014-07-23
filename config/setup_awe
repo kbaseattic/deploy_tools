@@ -14,7 +14,7 @@ my $acfg=$cfg->{services}->{awe};
 if ($ARGV[0] eq '-f' || ! -e '/kb/deployment'){
   stop_service('awe');
 
-  deploy_service('awe');
+  deploy_service('deploy','awe');
 
   symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
 
