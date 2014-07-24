@@ -9,7 +9,7 @@ exit if $ARGV[0] eq 'bootstrap';
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
-my @sl=('awe_service','workspace_deluxe','uploader','idserver');
+my @list=split /,/,$cfg->{services}->{aweworker}->{'deploy'};
 
 my $LOGFILE="/tmp/deploy.log";
 my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
@@ -20,7 +20,7 @@ if ( -e "$KB_DEPLOY/services/awe_service/stop_service"){
   mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/stop_aweclient | echo Ignore");
 }
 
-deploy_service('',@sl);
+deploy_service('',@list);
 chdir($KB_DC.'/modules');
 opendir(my $dh, './') || die "can't opendir ./: $!";
 my @modules = grep { ! /^\./ && -d "./$_" } readdir($dh);
@@ -28,20 +28,15 @@ closedir $dh;
 
 for my $_ (@modules){
     print "$_\n";
-    next if /auth_service/;
     next if /kb_model_seed/;
     chdir("$KB_DC/modules/$_");
-    my $target='deploy-client';
-    $target='deploy' if (/auth/);
+    my $target='deploy';
     mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS>> $LOGFILE 2>&1");
 }
 
-chdir($KB_DC.'/modules/awe_service') or die "Unable to change dir";
-mysystem(". $KB_DC/user-env.sh;make deploy-awe-client $MAKE_OPTIONS> $LOGFILE 2>&1");
-
-my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
 
 # Fix up config
+my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
 $mcfg->newval('Client','group',$cfg->{services}->{aweworker}->{'group'}) or die "Unable to set group";

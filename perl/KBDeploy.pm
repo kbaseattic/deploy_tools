@@ -55,6 +55,7 @@ sub maprepos {
     $repo{$reponame}=$repo{$s};
     $reponame{$s}=$reponame;
     $reponame2service{$reponame}=$s;
+    $reponame2service{$s}=$s;
   }
 }
 
