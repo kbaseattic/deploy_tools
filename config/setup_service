@@ -7,20 +7,23 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+my $hashfile;
+
+$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
 
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 
-
-my $me=`hostname`;
-chomp $me;
-
-
-my @sl=myservices($me);
+my @sl=myservices();
 exit unless scalar(@sl);
 
 mkdocs(@sl);
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
+#
+# redploy_service will tell us if we need to repeploy but
+# it also populates that hashes to deploy
+my $redeploy=KBDeploy::redeploy_service("../$hashfile",@sl);
+exit unless $redeploy;
 
 stop_service(@sl);
 

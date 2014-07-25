@@ -5,20 +5,20 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
-exit if $ARGV[0] eq 'bootstrap';
-
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+# We should know what service to run.  This is
+# just a safety measure in case it gets run on the wrong host.
+my @sl=myservices();
+exit unless scalar(@sl);
 
-my $me=`hostname`;
-chomp $me;
+my $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
+exit if $ARGV[0] eq 'bootstrap';
 
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
-my @sl=myservices($me);
+stop_service('shock');
 
-stop_service(@sl);
-
-deploy_service(@sl);
+deploy_service('shock');
 
 my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 
@@ -31,6 +31,4 @@ $mcfg->newval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database
 $mcfg->newval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
 $mcfg->newval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
 
-mysystem("cp shock.cfg ".$cfg->{'global'}->{deploydir}."/servies/shock_service");
-
-start_service(@sl);
+start_service('shock');
