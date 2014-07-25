@@ -5,10 +5,18 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+# We should know what service to run.  This is
+# just a safety measure in case it gets run on the wrong host.
+my @sl=myservices();
+exit unless scalar(@sl);
+
+my $hashfile;
+$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
+
 exit if $ARGV[0] eq 'bootstrap';
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
-my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
 my @list=split /,/,$cfg->{services}->{aweworker}->{'deploy'};
 
 my $LOGFILE="/tmp/deploy.log";

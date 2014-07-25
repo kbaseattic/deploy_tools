@@ -9,6 +9,10 @@ use strict;
 my $NAR_NAME="kbase/narrative";
 
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my $hashfile;
+
+$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
+exit if $ARGV[0] eq 'bootstrap';
 
 
 mkdir "/kb" unless -e "/kb";

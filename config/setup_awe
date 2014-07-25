@@ -8,7 +8,17 @@ use Config::IniFiles;
 
 exit if $ARGV[0] eq 'bootstrap';
 
+my $hashfile;
+$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
+exit if $ARGV[0] eq 'bootstrap';
+
 my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+
+# We should know what service to run.  This is
+# just a safety measure in case it gets run on the wrong host.
+my @sl=myservices();
+exit unless scalar(@sl);
+
 my $acfg=$cfg->{services}->{awe};
 
 if ($ARGV[0] eq '-f' || ! -e '/kb/deployment'){

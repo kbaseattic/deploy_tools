@@ -5,6 +5,9 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
+my $hashfile;
+
+$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
 
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';

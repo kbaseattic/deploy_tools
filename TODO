@@ -1,9 +1,11 @@
-- add mysql-client to base
+- remove need to specify config file and 'global'
 - change cluster.ini to deployment.cfg
 - workspace still requires a special step
 - Add something for external network interface to config file 
-- Split up deploy_service for the git checkout portion and the build step
-- Add ability to tag current head and insert tag into cluster.ini file
+- merge back setup scripts into deploy_cluster
 
 Completed
 - change shock and awe config files to be generated from ini file
+- Add ability to tag current head and insert tag into cluster.ini file
+- add mysql-client to base (added to bootstrape_node which is still evolving)
+- Split up deploy_service for the git checkout portion and the build step

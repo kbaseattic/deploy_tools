@@ -4,21 +4,30 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
-my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+# Parameters
 my $debug=0;
 my $nginxfile="/etc/nginx/sites-enabled/default";
 my $ngintemp=$FindBin::Bin."/nginx.tmpl";
 
+my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my @sl=myservices();
+die "Only run this on the www host\n" unless $sl[0] eq 'www';
+
+
 bootstrap() if ($ARGV[0] eq 'bootstrap');
 
+# Create document area
 mkdir "/kb" if ( ! -e "/kb/");
 mkdir "/kb/docs" if ( ! -e "/kb/docs");
 mkdir "/kb/docs/services" if ( ! -e "/kb/docs/services");
 mkdir "/kb/docs/services/docs" if ( ! -e "/kb/docs/services/docs");
 
+# Make a backup
 my $date=`date +%Y%m%d%H%M`;
+chomp $date;
 mysystem("/bin/cp $nginxfile /tmp/nginx.$date");
 
+# generate new config
 open(T,"./nginx.tmpl") or die "Unable to open template";
 open(my $new,">  $nginxfile") or die "Unable to open nginx file";
 while(<T>){
@@ -27,6 +36,9 @@ while(<T>){
   printserv($new,1) if (/\%SSLINCLUDE/);
 }
 close N;
+print `service nginx configtest`;
+my $status=$?;
+# TODO: if configtest fails then revert
 print `service nginx restart`;
 
 sub printserv{

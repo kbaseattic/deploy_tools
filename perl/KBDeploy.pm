@@ -164,7 +164,9 @@ sub clonetag {
     chdir "../";
   }
   # Save the stats
-  my $hash=`cd $package;git log --pretty='%H' -n 1`;
+  my $dir=$repo{$package};
+  $dir=~s/.*\///;
+  my $hash=`cd $dir;git log --pretty='%H' -n 1` or die "Unable to get hash\n";
   chomp $hash;
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
   open GH,">> $hf" or die "Unable to create $hf\n";
@@ -310,6 +312,7 @@ sub redeploy_service {
     chomp;
     my ($s,$url,$hash)=split;
     return 1 if $url ne $cfg->{services}->{$s}->{giturl};
+    return 1 if ! defined $cfg->{services}->{$s}->{hash};
     return 1 if $hash ne $cfg->{services}->{$s}->{hash};
   }
  

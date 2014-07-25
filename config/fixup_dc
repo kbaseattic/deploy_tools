@@ -1,4 +1,7 @@
 #!/bin/sh
+exit
+
+# See if this is no longer needed
 
 # Fix up setup
 echo 'export ANT_HOME=$KB_RUNTIME/ant' >> ./user-env.sh
