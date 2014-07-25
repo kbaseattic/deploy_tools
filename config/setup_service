@@ -27,6 +27,6 @@ exit unless $redeploy;
 
 stop_service(@sl);
 
-deploy_service(@sl);
+deploy_service('deploy',@sl);
 
 start_service(@sl);

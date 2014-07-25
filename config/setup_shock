@@ -18,7 +18,7 @@ exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
 stop_service('shock');
 
-deploy_service('shock');
+deploy_service('deploy','shock');
 
 my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 
