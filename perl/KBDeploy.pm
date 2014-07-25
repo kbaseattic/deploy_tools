@@ -18,7 +18,13 @@ our @ISA    = qw(Exporter);
 our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service deploy_service myservices mkdocs);
 
 our $cfg;
-our $globaltag;
+$cfg->{global}->{type}='global';
+$cfg->{defaults}->{type}='defaults';
+our $global=$cfg->{global};
+our $defaults=$cfg->{defaults};
+
+our $cfgfile='cluster.ini';
+
 # repo is hash that points to the git repo.  It should work for both the
 # service name in the config file as well as the git repo name
 our %repo;
@@ -36,9 +42,9 @@ $basedir=~s/config$//;
 #my $KB_RT="$KB_BASE/runtime";
 #my $MAKE_OPTIONS=$ENV{"MAKE_OPTIONS"};
 #
-#$KB_DEPLOY=$cfg->{$globaltag}->{deploydir} if (defined $cfg->{$globaltag}->{deploydir});
-#$KB_DC=$cfg->{$globaltag}->{devcontainer} if (defined $cfg->{$globaltag}->{devcontainer});
-#$KB_RT=$cfg->{$globaltag}->{runtime} if (defined $cfg->{$globaltag}->{runtime});
+#$KB_DEPLOY=$global->{deploydir} if (defined $global->{deploydir});
+#$KB_DC=$global->{devcontainer} if (defined $global->{devcontainer});
+#$KB_RT=$global->{runtime} if (defined $global->{runtime});
 
 if (-e "$basedir/config/gitssh" ){
   $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
@@ -76,30 +82,35 @@ sub myservices {
 
 sub read_config {
    my $file=shift;
-   $globaltag=shift;
-   my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+   $cfgfile=$file if defined $file;
+
+   my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
    # Could use the tie option, but let's build it up ourselves
 
    for my $section ($mcfg->Sections()){
-     if ($section eq $globaltag){
+     if ($section eq 'global'){
        foreach ($mcfg->Parameters($section)){
-         $cfg->{$globaltag}->{$_}=$mcfg->val($section,$_);
+         $global->{$_}=$mcfg->val($section,$_);
+       }
+     }
+     elsif ($section eq 'defaults'){
+       foreach ($mcfg->Parameters($section)){
+         $defaults->{$_}=$mcfg->val($section,$_);
        }
      }
      else {
-       $cfg->{services}->{$section}->{mem}=$cfg->{$globaltag}->{mem};
-       $cfg->{services}->{$section}->{cores}=$cfg->{$globaltag}->{cores};
-       #$cfg->{services}->{$section}->{host}=$cfg->{$globaltag}->{basename}."-".$section;
+       for my $p (keys %{$defaults}){
+         $cfg->{services}->{$section}->{$p}=$defaults->{$p};
+       }
        $cfg->{services}->{$section}->{urlname}=$section;
        $cfg->{services}->{$section}->{basedir}=$section;
-       $cfg->{services}->{$section}->{giturl}=$cfg->{$globaltag}->{repobase}."/".$section;
+       $cfg->{services}->{$section}->{giturl}=$global->{repobase}."/".$section;
        foreach ($mcfg->Parameters($section)){
          $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
        }
-       if (! defined $cfg->{services}->{$section}->{type} || $cfg->{services}->{$section}->{type} ne 'lib'){
-         push @{$cfg->{servicelist}},$section;
-       }
+       push @{$cfg->{servicelist}},$section if (! $cfg->{services}->{$section}->{type} eq 'service');
      }
    }
    maprepos();
@@ -133,7 +144,7 @@ sub clonetag {
   my $mytag=$cfg->{services}->{$reponame2service{$package}}->{hash};
 
   $mytag="head" if ! defined $mytag; 
-  $mytag=$cfg->{$globaltag}->{tag} if defined $cfg->{$globaltag}->{tag};
+  $mytag=$global->{tag} if defined $global->{tag};
   print "$package $mytag\n";
 
   print "- Cloning $package\n";
@@ -155,7 +166,7 @@ sub clonetag {
   # Save the stats
   my $hash=`cd $package;git log --pretty='%H' -n 1`;
   chomp $hash;
-  my $hf=$cfg->{$globaltag}->{devcontainer}."/".$cfg->{$globaltag}->{hashfile};
+  my $hf=$global->{devcontainer}."/".$global->{hashfile};
   open GH,">> $hf" or die "Unable to create $hf\n";
   print GH "$reponame2service{$package} $repo{$package} $hash\n";
   close GH;
@@ -165,7 +176,7 @@ sub clonetag {
 #
 sub getdeps {
   my $mserv=shift;
-  my $KB_DC=$cfg->{$globaltag}->{devcontainer};
+  my $KB_DC=$global->{devcontainer};
   print "- Processing dependencies for $mserv\n";
   $mserv=$reponame{$mserv} if defined $reponame{$mserv};
 
@@ -192,9 +203,9 @@ sub getdeps {
 #
 sub deploy_devcontainer {
   my $LOGFILE=shift;
-  my $KB_DC=$cfg->{$globaltag}->{devcontainer};
-  my $KB_RT=$cfg->{$globaltag}->{runtime};
-  my $MAKE_OPTIONS=$cfg->{$globaltag}->{'make-options'};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  my $MAKE_OPTIONS=$global->{'make-options'};
 
   my $KB_BASE=$KB_DC;
   # Strip off last
@@ -226,7 +237,7 @@ sub deploy_devcontainer {
 # Start service helper function
 #
 sub start_service {
-  my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
+  my $KB_DEPLOY=$global->{deploydir};
   for my $s (@_)  {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
@@ -243,7 +254,7 @@ sub start_service {
 # Stop Services
 #
 sub stop_service {
-  my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
+  my $KB_DEPLOY=$global->{deploydir};
   for my $s (@_) {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
@@ -290,7 +301,7 @@ sub redeploy_service {
   readhashes($tagfile);
 # Check hashes
 
-  my $hf=$cfg->{$globaltag}->{devcontainer}."/".$cfg->{$globaltag}->{hashfile};
+  my $hf=$global->{devcontainer}."/".$global->{hashfile};
   if (! open(H,"$hf")){
     print STDERR "Missing hash file $hf\n";
     return 1;
@@ -307,10 +318,10 @@ sub redeploy_service {
 
 sub deploy_service {
   my $LOGFILE="/tmp/deploy.log";
-  my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
-  my $KB_DC=$cfg->{$globaltag}->{devcontainer};
-  my $KB_RT=$cfg->{$globaltag}->{runtime};
-  my $MAKE_OPTIONS=$cfg->{$globaltag}->{'make-options'};
+  my $KB_DEPLOY=$global->{deploydir};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  my $MAKE_OPTIONS=$global->{'make-options'};
   my $target=shift;
 
   # Extingush all traces of previous deployments
@@ -337,7 +348,7 @@ sub deploy_service {
     mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";
   }
   # Copy the deployment config from the reference copy
-  mysystem("cp $basedir/cluster.ini $KB_DEPLOY/deployment.cfg");
+  mysystem("cp $basedir/$cfgfile $KB_DEPLOY/deployment.cfg");
 
   print "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
@@ -359,7 +370,7 @@ sub gittag {
 }
 
 sub mkdocs {
-  my $KB_DEPLOY=$cfg->{$globaltag}->{deploydir};
+  my $KB_DEPLOY=$global->{deploydir};
   for my $s (@_){
     my $bd=$cfg->{services}->{$s}->{basedir};
     symlink $KB_DEPLOY."/services/$bd/webroot","/var/www/$bd";

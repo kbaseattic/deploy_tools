@@ -8,12 +8,12 @@ use strict;
 
 my $debug=0;
 
-my $cfgfile="./cluster.ini";
-my $globaltag='global';
 
 
-my $cfg=read_config($cfgfile,$globaltag);
-my $basedir=$cfg->{$globaltag}->{dtdir};
+my $cfg=read_config();
+my $global=$cfg->{global};
+my $basedir=$global->{dtdir};
+my $cfgfile='cluster.ini';
 
 my $command=shift @ARGV;
 
@@ -37,17 +37,14 @@ switch ($command) {
   case /status/ {
      status();
   }
-  case /startservice/ {
-     startservice();
-  }
-  case /start$/ {
-     start();
+  case /start/ {
+    start(@ARGV);
   }
   case /mkhashfile$/ {
      mkhashfile();
   }
   else {
-    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start|mkhashfile>\n";
+    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|mkhashfile>\n";
     exit 1;
   }
 }
@@ -55,13 +52,13 @@ switch ($command) {
 
 sub vmpreflight {
   # Check that group exist
-  #if (system("lsdef -t group ".$cfg->{global}->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
+  #if (system("lsdef -t group ".$global->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
   #  print "Add group\n";
-  #  mysystem("mkdef -t group $cfg->{global}->{xcatgroup}");
+  #  mysystem("mkdef -t group $global->{xcatgroup}");
   #}
 
   # Get a list of configured services and used nodes
-  open(L,"nodels $cfg->{global}->{xcatgroup} nodelist.comments|");
+  open(L,"nodels $global->{xcatgroup} nodelist.comments|");
   while(<L>){
     chomp;
     my ($host,$service)=split /: /;
@@ -73,8 +70,8 @@ sub vmpreflight {
   }
 
   # Create a list of nodes that can be used
-  for (my $i=1;$i<=$cfg->{global}->{maxnodes};$i++){
-    my $name=sprintf "%s%02d",$cfg->{global}->{basename},$i;
+  for (my $i=1;$i<=$global->{maxnodes};$i++){
+    my $name=sprintf "%s%02d",$global->{basename},$i;
     if (! defined $cfg->{nodes}->{used}->{$name}){
       print "Available: $name\n" if $debug;
       push @{$cfg->{nodes}->{available}},$name;
@@ -87,8 +84,8 @@ sub vmpreflight {
 # TODO: add a timeout
 #
 sub boot_nodes {
-  mysystem("rpower $cfg->{global}->{xcatgroup} on > /dev/null");
-  while(system("nodestat $cfg->{global}->{xcatgroup}|grep -vc sshd > /dev/null") eq 0){
+  mysystem("rpower $global->{xcatgroup} on > /dev/null");
+  while(system("nodestat $global->{xcatgroup}|grep -vc sshd > /dev/null") eq 0){
     sleep 5;
   }
   print "All nodes up\n";
@@ -112,9 +109,9 @@ sub configure_vms {
     }
   }
   # Post creation
-  mysystem("makehosts $cfg->{global}->{xcatgroup}");
-  mysystem("makeconservercf $cfg->{global}->{xcatgroup}");
-  mysystem("makedhcp $cfg->{global}->{xcatgroup}");
+  mysystem("makehosts $global->{xcatgroup}");
+  mysystem("makeconservercf $global->{xcatgroup}");
+  mysystem("makedhcp $global->{xcatgroup}");
 }
 
 #
@@ -124,23 +121,24 @@ sub config_host{
   my $host=shift;
   my $service=shift;
 
-  my $mem=$cfg->{services}->{$service}->{mem};
-  my $cores=$cfg->{services}->{$service}->{cores};
-  $cfg->{services}->{$service}->{host}=$host;
+  my $scfg=$cfg->{services}->{$service};
+  my $mem=$scfg->{mem};
+  my $cores=$scfg->{cores};
+  $scfg->{host}=$host;
 
   print "Configuring $host for $service with $mem and $cores cores\n";
-  my $ct=`nodels $cfg->{global}->{xcatgroup} |grep -c $host`;
+  my $ct=`nodels $global->{xcatgroup} |grep -c $host`;
   chomp $ct;
   if ($ct eq 0 ){
     print STDERR "Adding $host\n" if $debug;
-    mysystem("nodeadd $host groups=".$cfg->{global}->{xcatgroup}.",".$cfg->{global}->{othergroups});
+    mysystem("nodeadd $host groups=".$global->{xcatgroup}.",".$global->{othergroups});
   }
   mysystem("nodech $host nodelist.comments=$service");
-  my $alias=$cfg->{global}->{basename}."-".$service;
+  my $alias=$global->{basename}."-".$service;
   mysystem("nodech $host vm.memory=$mem vm.cpus=$cores hosts.hostnames=$alias");
-  mysystem("clonevm $host -b ".$cfg->{global}->{baseimage});
-  if (defined $cfg->{services}->{$service}->{disk}){
-    foreach my $size (split /,/,$cfg->{services}->{$service}->{disk}){
+  mysystem("clonevm $host -b ".$global->{baseimage});
+  if (defined $scfg->{disk}){
+    foreach my $size (split /,/,$scfg->{disk}){
       mysystem("chvm $host -a $size");
     }
   }
@@ -153,7 +151,7 @@ sub config_host{
 #
 sub sync_dt {
    # Push out the scripts
-   my $xg=$cfg->{global}->{xcatgroup};
+   my $xg=$global->{xcatgroup};
    my $fl=join " ",@_;
 
    mysystem("xdsh $xg '[ -e $basedir ] || mkdir $basedir'");
@@ -165,8 +163,9 @@ sub sync_dt {
 
 # Propogate a list of files to the basedir on each node
 #
+# TODO: Move into KBDeploy
 sub sync_files {
-   my $xg=$cfg->{global}->{xcatgroup};
+   my $xg=$global->{xcatgroup};
    my $fl=join " ",@_;
    mysystem("xdcp $xg $fl $basedir/") if $fl ne '';
 }
@@ -175,19 +174,28 @@ sub sync_files {
 # Deploy service
 #
 sub deploy_services{
-
-   vmpreflight();
    my $hashfile=shift;
-   sync_files('cluster.ini',$hashfile);
-   $hashfile=~s/.*\/// if defined $hashfile;
-   print STDERR "Hasfile: $hashfile\n";
+
+   if ($hashfile eq 'all'){
+     vmpreflight();
+     $hashfile=shift;
+     sync_files($cfgfile,$hashfile);
+     $hashfile=~s/.*\/// if defined $hashfile;
+     print STDERR "Hasfile: $hashfile\n";
    
-   #Now run the local scripts
-   for my $service (@{$cfg->{servicelist}}){
-     my $script=$cfg->{$globaltag}->{setup};
-     $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
-     print "Runnig $script on $service\n";
-     mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
+     #Now run the local scripts
+     for my $service (@{$cfg->{servicelist}}){
+       my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
+       print "Runnig $script on $service\n";
+       mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
+     }
+   }
+   else{
+     my @sl=myservices();
+     for my $service (@sl){
+        my $script=$cfg->{services}->{$service}->{setup};
+        mysystem("cd $basedir/config;./$script $hashfile");
+     }
    }
 }
 
@@ -196,29 +204,26 @@ sub deploy_services{
 # TODO: Make this better
 #
 sub status{
-   my $xg=$cfg->{global}->{xcatgroup};
+   my $xg=$global->{xcatgroup};
    mysystem("xdsh $xg 'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$'");
 }
 
-# Run startservice on all nodes
+# Run start_service
 sub start{
-   sync_nodes();
-   my $xg=$cfg->{global}->{xcatgroup};
+   my $param=shift;
 
-   mysystem("xdsh $xg 'cd $basedir/;./$0 startservice'");
-}
+   if ($param eq 'all'){
+     sync_nodes();
+     my $xg=$global->{xcatgroup};
 
-#
-# startservice is for a specific node
-#
-sub startservice{
-  my $me=`hostname`;
-  chomp $me;
-  print "$me\n";
+     mysystem("xdsh $xg 'cd $basedir/;./$0 startservice'");
+   }
+   else{
+     my @sl=myservices();
 
-  my @sl=myservices($me);
-
-  start_service(@sl);
+    # from KBDeploy
+    start_service(@sl);
+   }
 }
 
 #
