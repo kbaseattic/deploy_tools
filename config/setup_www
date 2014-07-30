@@ -9,7 +9,7 @@ my $debug=0;
 my $nginxfile="/etc/nginx/sites-enabled/default";
 my $ngintemp=$FindBin::Bin."/nginx.tmpl";
 
-my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my $cfg=read_config();
 my @sl=myservices();
 die "Only run this on the www host\n" unless $sl[0] eq 'www';
 

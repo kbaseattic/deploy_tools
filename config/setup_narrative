@@ -8,7 +8,7 @@ use strict;
 # This is the name for now, as this is what the Lua provisioner looks for to fire up a Narrative.
 my $NAR_NAME="kbase/narrative";
 
-my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my $cfg=read_config();
 my $hashfile;
 
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');

@@ -12,7 +12,7 @@ exit if $ARGV[0] eq 'bootstrap';
 
 exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
 
-my $cfg=read_config("$FindBin::Bin/../cluster.ini",'global');
+my $cfg=read_config();
 
 my $LOGFILE="/tmp/deploy.log";
 my $KB_DC=$cfg->{'global'}->{devcontainer};

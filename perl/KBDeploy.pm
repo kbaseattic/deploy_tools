@@ -23,7 +23,22 @@ $cfg->{defaults}->{type}='defaults';
 our $global=$cfg->{global};
 our $defaults=$cfg->{defaults};
 
-our $cfgfile='cluster.ini';
+our $cfgfile;
+
+# Order of search: Look in run directory, then directory of script, then one level up
+if ( -e './cluster.ini'){
+  $cfgfile="./cluster.ini";
+}
+elsif ( -e $FindBin::Bin.'/cluster.ini'){
+  $cfgfile=$FindBin::Bin.'/cluster.ini';
+}
+elsif ( -e $FindBin::Bin.'/../cluster.ini'){
+  $cfgfile=$FindBin::Bin.'/../cluster.ini';
+}
+else {
+  die "Unable to find config file\n";
+}
+
 
 # repo is hash that points to the git repo.  It should work for both the
 # service name in the config file as well as the git repo name
@@ -86,32 +101,31 @@ sub read_config {
    $cfgfile=$file if defined $file;
 
    my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open $file".$Config::IniFiles::errors[0];
+   $cfg->{global}->{repobase}='undefined';
 
+   # Read global and default first
+   for my $section ('global','defaults'){
+       foreach ($mcfg->Parameters($section)){
+         $cfg->{$section}->{$_}=$mcfg->val($section,$_);
+       }
+   }
    # Could use the tie option, but let's build it up ourselves
-
+   
    for my $section ($mcfg->Sections()){
-     if ($section eq 'global'){
-       foreach ($mcfg->Parameters($section)){
-         $global->{$_}=$mcfg->val($section,$_);
-       }
+     next if ($section eq 'global' || $section eq 'defaults');
+     # Populate default values
+     for my $p (keys %{$defaults}){
+       $cfg->{services}->{$section}->{$p}=$defaults->{$p};
      }
-     elsif ($section eq 'defaults'){
-       foreach ($mcfg->Parameters($section)){
-         $defaults->{$_}=$mcfg->val($section,$_);
-       }
+     $cfg->{services}->{$section}->{urlname}=$section;
+     $cfg->{services}->{$section}->{basedir}=$section;
+     $cfg->{services}->{$section}->{giturl}=$global->{repobase}."/".$section;
+
+     # Now override or add with defined values
+     foreach ($mcfg->Parameters($section)){
+       $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
      }
-     else {
-       for my $p (keys %{$defaults}){
-         $cfg->{services}->{$section}->{$p}=$defaults->{$p};
-       }
-       $cfg->{services}->{$section}->{urlname}=$section;
-       $cfg->{services}->{$section}->{basedir}=$section;
-       $cfg->{services}->{$section}->{giturl}=$global->{repobase}."/".$section;
-       foreach ($mcfg->Parameters($section)){
-         $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
-       }
-       push @{$cfg->{servicelist}},$section if (! $cfg->{services}->{$section}->{type} eq 'service');
-     }
+     push @{$cfg->{servicelist}},$section if ( $cfg->{services}->{$section}->{type} eq 'service');
    }
    maprepos();
    return $cfg;

@@ -7,9 +7,7 @@ use strict;
 
 my $debug=0;
 
-my $cfgfile="$FindBin::Bin/../cluster.ini";
-
-my $cfg=read_config($cfgfile,'global');
+my $cfg=read_config();
 
 boostrap() if $ARGV[0] eq 'bootstrap';
 
