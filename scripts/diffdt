@@ -1,0 +1,8 @@
+#!/bin/sh
+
+mkdir ../${1}
+rsync -avz ${1}:dt ../${1}/
+diff -ru ./config ../${1}/dt/config
+diff -ru ./perl ../${1}/dt/perl
+diff -ru ./cluster.ini ../${1}/dt/cluster.ini
+diff -ru ./deploy_cluster ../${1}/dt/deploy_cluster

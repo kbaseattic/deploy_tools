@@ -4,6 +4,7 @@ use lib './perl';
 use Switch;
 use Data::Dumper;
 use KBDeploy;
+use KBProvision;
 use strict;
 
 my $debug=0;
@@ -19,11 +20,11 @@ my $command=shift @ARGV;
 
 switch ($command) {
   case /mkvm/ {
-    vmpreflight();
+    update_available();
     configure_vms();
   }
   case /boot/ {
-    boot_nodes();
+    KBProvision::boot_nodes($global->{xcatgroup});
   }
   case /syncdt/ {
     sync_dt();
@@ -32,7 +33,7 @@ switch ($command) {
     deploy_services(@ARGV);
   }
   case /updatehostassignments/ {
-     vmpreflight();
+     update_available();
   }
   case /status/ {
      status();
@@ -50,24 +51,8 @@ switch ($command) {
 }
 
 
-sub vmpreflight {
-  # Check that group exist
-  #if (system("lsdef -t group ".$global->{xcatgroup}."|grep -c 'Could not' > /dev/null") eq 0 ){
-  #  print "Add group\n";
-  #  mysystem("mkdef -t group $global->{xcatgroup}");
-  #}
-
-  # Get a list of configured services and used nodes
-  open(L,"nodels $global->{xcatgroup} nodelist.comments|");
-  while(<L>){
-    chomp;
-    my ($host,$service)=split /: /;
-    if ($service ne ''){
-      $cfg->{services}->{$service}->{host}=$host;
-      print "Found $service on $host\n" if $debug;
-      $cfg->{nodes}->{used}->{$host}=1;
-    }
-  }
+sub update_available {
+  my $cfg->{nodes}->{used}=KBProvision::assignments($global->{xcatgroup});
 
   # Create a list of nodes that can be used
   for (my $i=1;$i<=$global->{maxnodes};$i++){
@@ -80,69 +65,24 @@ sub vmpreflight {
 }
 
 #
-# Boot all nodes and wait for them to come up.
-# TODO: add a timeout
-#
-sub boot_nodes {
-  mysystem("rpower $global->{xcatgroup} on > /dev/null");
-  while(system("nodestat $global->{xcatgroup}|grep -vc sshd > /dev/null") eq 0){
-    sleep 5;
-  }
-  print "All nodes up\n";
-}
-
-#
 # For each service, see if there is a host assigned.  If not, create it
 #
 sub configure_vms {
   foreach my $service (@{$cfg->{servicelist}}){
     #next if $service eq $globaltag;
-    print "Service: $service\n";
-    if (! defined $cfg->{services}->{$service}->{host}){
-      print "- Configue $service\n";
+    print "Service: $service\n" if $debug;
+    my $scfg=$cfg->{services}->{$service};
+    if (! defined $scfg->{host}){
+      print "- Configue $service\n" if $debug;
       my $host=shift @{$cfg->{nodes}->{available}} or die "No more nodes to allocate";
-      print "- Using $host\n";
-      config_host($host,$service);
+      print "- Assigning $host to $service\n";
+      KBProvision::config_host($host,$service,$scfg);
+      KBDeploy::update_config($cfgfile,$service,'host',$host);
     }
     else{
-      print "- Configured using $cfg->{services}->{$service}->{host}\n";
+      print "- Configured using $scfg->{host}\n" if $debug;
     }
   }
-  # Post creation
-  mysystem("makehosts $global->{xcatgroup}");
-  mysystem("makeconservercf $global->{xcatgroup}");
-  mysystem("makedhcp $global->{xcatgroup}");
-}
-
-#
-# Configure a host for a service
-#
-sub config_host{
-  my $host=shift;
-  my $service=shift;
-
-  my $scfg=$cfg->{services}->{$service};
-  my $mem=$scfg->{mem};
-  my $cores=$scfg->{cores};
-  $scfg->{host}=$host;
-
-  print "Configuring $host for $service with $mem and $cores cores\n";
-  my $ct=`nodels $global->{xcatgroup} |grep -c $host`;
-  chomp $ct;
-  if ($ct eq 0 ){
-    print STDERR "Adding $host\n" if $debug;
-    mysystem("nodeadd $host groups=".$global->{xcatgroup}.",".$global->{othergroups});
-  }
-  mysystem("nodech $host nodelist.comments=$service");
-  my $alias=$global->{basename}."-".$service;
-  mysystem("nodech $host vm.memory=$mem vm.cpus=$cores hosts.hostnames=$alias");
-  mysystem("clonevm $host -b ".$global->{baseimage});
-  if (defined $scfg->{disk}){
-    foreach my $size (split /,/,$scfg->{disk}){
-      mysystem("chvm $host -a $size");
-    }
-  }
-  KBDeploy::update_config($cfgfile,$service,'host',$host);
 }
 
 #
@@ -154,20 +94,11 @@ sub sync_dt {
    my $xg=$global->{xcatgroup};
    my $fl=join " ",@_;
 
-   mysystem("xdsh $xg '[ -e $basedir ] || mkdir $basedir'");
+   KBProvision::run_remote_all($xg,"[ -e $basedir ] || mkdir $basedir");
    mysystem("xdcp $xg $0 $basedir/$0");
    mysystem("xdcp $xg $cfgfile $basedir/$cfgfile");
    mysystem("xdcp $xg -R perl $basedir/");
    mysystem("xdcp $xg -R config $basedir/");
-}
-
-# Propogate a list of files to the basedir on each node
-#
-# TODO: Move into KBDeploy
-sub sync_files {
-   my $xg=$global->{xcatgroup};
-   my $fl=join " ",@_;
-   mysystem("xdcp $xg $fl $basedir/") if $fl ne '';
 }
 
 #
@@ -177,9 +108,9 @@ sub deploy_services{
    my $hashfile=shift;
 
    if ($hashfile eq 'all'){
-     vmpreflight();
+     update_available();
      $hashfile=shift;
-     sync_files($cfgfile,$hashfile);
+     KBProvision::sync_files($global->{xcatgroup},$basedir,$cfgfile,$hashfile);
      $hashfile=~s/.*\/// if defined $hashfile;
      print STDERR "Hasfile: $hashfile\n";
    
@@ -205,7 +136,7 @@ sub deploy_services{
 #
 sub status{
    my $xg=$global->{xcatgroup};
-   mysystem("xdsh $xg 'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$'");
+   KBProvision::run_remote_all($xg,'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$;true');
 }
 
 # Run start_service
@@ -213,16 +144,16 @@ sub start{
    my $param=shift;
 
    if ($param eq 'all'){
-     sync_nodes();
+     sync_dt();
      my $xg=$global->{xcatgroup};
 
-     mysystem("xdsh $xg 'cd $basedir/;./$0 startservice'");
+     KBProvision::run_remote_all($xg,"cd $basedir/;./$0 start");
    }
    else{
+     # This is run on the service node
      my @sl=myservices();
 
-    # from KBDeploy
-    start_service(@sl);
+     KBDeploy::start_service(@sl);
    }
 }
 
@@ -249,3 +180,4 @@ sub mkhashfile {
   print TF $out;
   close TF;
 }
+

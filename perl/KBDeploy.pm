@@ -119,6 +119,7 @@ sub read_config {
      }
      $cfg->{services}->{$section}->{urlname}=$section;
      $cfg->{services}->{$section}->{basedir}=$section;
+     $cfg->{services}->{$section}->{alias}=$global->{basename}.'-'.$section;
      $cfg->{services}->{$section}->{giturl}=$global->{repobase}."/".$section;
 
      # Now override or add with defined values
