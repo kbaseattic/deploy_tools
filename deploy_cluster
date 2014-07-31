@@ -91,14 +91,14 @@ sub configure_vms {
 #
 sub sync_dt {
    # Push out the scripts
-   my $xg=$global->{xcatgroup};
    my $fl=join " ",@_;
+   my $list=KBDeploy::hostlist();
 
-   KBProvision::run_remote_all($xg,"[ -e $basedir ] || mkdir $basedir");
-   mysystem("xdcp $xg $0 $basedir/$0");
-   mysystem("xdcp $xg $cfgfile $basedir/$cfgfile");
-   mysystem("xdcp $xg -R perl $basedir/");
-   mysystem("xdcp $xg -R config $basedir/");
+   KBProvision::run_remote_all($list,"[ -e $basedir ] || mkdir $basedir");
+   mysystem("xdcp $list $0 $basedir/$0");
+   mysystem("xdcp $list $cfgfile $basedir/$cfgfile");
+   mysystem("xdcp $list -R perl $basedir/");
+   mysystem("xdcp $list -R config $basedir/");
 }
 
 #
@@ -109,10 +109,14 @@ sub deploy_services{
 
    if ($hashfile eq 'all'){
      update_available();
+     my $list=KBDeploy::hostlist();
+     KBProvision::sync_files($list,$basedir,$cfgfile);
      $hashfile=shift;
-     KBProvision::sync_files($global->{xcatgroup},$basedir,$cfgfile,$hashfile);
-     $hashfile=~s/.*\/// if defined $hashfile;
-     print STDERR "Hasfile: $hashfile\n";
+     if (defined $hashfile){
+       KBProvision::sync_files($list,$basedir,$hashfile);
+       $hashfile=~s/.*\/// if defined $hashfile;
+       print STDERR "Hasfile: $hashfile\n";
+     }
    
      #Now run the local scripts
      for my $service (@{$cfg->{servicelist}}){
@@ -135,8 +139,8 @@ sub deploy_services{
 # TODO: Make this better
 #
 sub status{
-   my $xg=$global->{xcatgroup};
-   KBProvision::run_remote_all($xg,'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$;true');
+   my $list=KBDeploy::hostlist();
+   KBProvision::run_remote_all($list,'ps aux|grep /kb|grep -v grep|wc -l|grep 0\$;true');
 }
 
 # Run start_service
@@ -145,9 +149,9 @@ sub start{
 
    if ($param eq 'all'){
      sync_dt();
-     my $xg=$global->{xcatgroup};
+     my $list=KBDeploy::hostlist();
 
-     KBProvision::run_remote_all($xg,"cd $basedir/;./$0 start");
+     KBProvision::run_remote_all($list,"cd $basedir/;./$0 start");
    }
    else{
      # This is run on the service node

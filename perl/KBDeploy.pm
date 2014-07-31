@@ -94,6 +94,15 @@ sub myservices {
   return @sl;
 }
 
+sub hostlist {
+  my %l;
+  for my $s (keys %{$cfg->{services}}){
+    my $h=$cfg->{services}->{$s}->{host};
+    $l{$h}=1 if defined $h;
+  }
+  return join ',',sort keys %l;
+}
+
 
 sub read_config {
    my $file=shift;

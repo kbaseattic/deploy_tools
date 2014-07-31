@@ -33,7 +33,7 @@ sub sync_files {
    my $basedir=shift;
    my $fl=join " ",@_;
    return 1 if $fl eq '';
-   system("xdcp $xg $fl $basedir/ > /dev/null 2>&1");
+   system("pdcp -w $xg $fl $basedir/ > /dev/null 2>&1");
    return 1 if $? eq 0;
    return 0;
 }
@@ -107,7 +107,7 @@ sub config_host{
 sub run_remote_all{
   my $group=shift;
   my $command=shift;  
-  mysystem("xdsh $group \"$command\"");
+  mysystem("pdsh -w $group \"$command\"");
   return 1;
 }
 
