@@ -375,7 +375,7 @@ sub deploy_service {
     mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";
   }
   # Copy the deployment config from the reference copy
-  mysystem("cp $basedir/$cfgfile $KB_DEPLOY/deployment.cfg");
+  mysystem("cp $cfgfile $KB_DEPLOY/deployment.cfg");
 
   print "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
