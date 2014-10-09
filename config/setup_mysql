@@ -9,6 +9,14 @@ my $debug=0;
 
 my $cfg=read_config();
 
+my @sl=myservices();
+my $me=$sl[0];
+my $adminpass='';
+
+if (defined $cfg->{services}->{$me}->{'adminpass'}){
+  $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};
+};
+
 boostrap() if $ARGV[0] eq 'bootstrap';
 
 my %userexist;
@@ -50,15 +58,15 @@ for my $s (keys %{$cfg->{services}}){
   }
 }
 
-open(L,"ls *.sql|");
+open(L,"ls *.sql 2>/dev/null|");
 while (<L>){
   chomp;
-  mysystem("cat *.sql|mysql");
+  mysystem("cat *.sql|mysql $adminpass");
 }
 close L;
 
 sub getusers {
-  open(U,"echo 'select User from user'|mysql mysql|");
+  open(U,"echo 'select User from user'|mysql $adminpass mysql|");
   while(<U>){
     chomp;
     $userexist{$_}=1;
@@ -66,7 +74,7 @@ sub getusers {
 }
 
 sub getdbs {
-  open(U,"echo 'show DATABASES'|mysql mysql|");
+  open(U,"echo 'show DATABASES'|mysql $adminpass mysql|");
   while(<U>){
     chomp;
     $dbexist{$_}=1;
@@ -81,14 +89,14 @@ sub add_user {
 
   my $mycom;
   $perm='SELECT' if (! defined $perm);
-  open(MY,"|mysql");
+  open(MY,"|mysql $adminpass");
   printf MY "CREATE USER '%s'\@'%%' IDENTIFIED BY '%s';\n",$user,$pass unless $userexist{$user};
   $userexist{$user}=1;
   printf MY "CREATE DATABASE %s;\n",$db unless $dbexist{$db};
   $dbexist{$db}=1;
   printf MY "GRANT %s ON %s.* TO '%s'\@'%%';\n",$perm,$db,$user;
   close MY;
-#  mysystem("cat << EOF|mysql\n".$mycom."EOF\n");
+#  mysystem("cat << EOF|mysql $pass\n".$mycom."EOF\n");
 #  print "$mycom";
 }
 
