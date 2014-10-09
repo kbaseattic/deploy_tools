@@ -37,6 +37,8 @@ closedir $dh;
 for my $_ (@modules){
     print "$_\n";
     next if /kb_model_seed/;
+    next if /handle_mngr/;
+    next if /kbwf_common/;
     chdir("$KB_DC/modules/$_");
     my $target='deploy';
     mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS>> $LOGFILE 2>&1");
