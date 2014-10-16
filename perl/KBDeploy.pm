@@ -87,7 +87,7 @@ sub myservices {
     chomp $me;
   }
   my @sl;
-  for my $s (keys %{$cfg->{services}}){
+  for my $s (@{$cfg->{servicelist}}){
     next unless defined $cfg->{services}->{$s}->{host};
     push @sl,$s if ($cfg->{services}->{$s}->{host} eq $me);
   }
@@ -172,8 +172,11 @@ sub clonetag {
   print "$package $mytag\n";
 
   print "- Cloning $package\n";
-  if ( -e $package ) {
-    chdir $package or die "Unable to cd";
+  my $dir=$repo{$package};
+  $dir=~s/\/$//;
+  $dir=~s/.*\///;
+  if ( -e $dir ) {
+    chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
     mysystem("git checkout master  > /dev/null 2>&1");
     mysystem("git pull  > /dev/null 2>&1");
@@ -188,8 +191,6 @@ sub clonetag {
     chdir "../";
   }
   # Save the stats
-  my $dir=$repo{$package};
-  $dir=~s/.*\///;
   my $hash=`cd $dir;git log --pretty='%H' -n 1` or die "Unable to get hash\n";
   chomp $hash;
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
@@ -268,7 +269,7 @@ sub start_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
     if ( -e "$KB_DEPLOY/services/$spath/start_service" ) {
-      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/start_service");
+      mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service");
     }
     else {
       print "No start script found in $s\n";
@@ -285,9 +286,39 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
-      mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/$spath/stop_service || echo Ignore");
+      mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
     }
   }
+}
+
+
+# Generate auto deploy
+sub generate_autodeploy{
+  my $ad=shift;
+  my $KB_DC=$global->{devcontainer};
+
+  mysystem("cp $cfgfile $ad");
+
+  # TODO: Remove the need to read in bootstrap.cfg
+  my $bcfg=new Config::IniFiles( -file => $KB_DC."/bootstrap.cfg") or die "Unable to open bootstrap".$Config::IniFiles::errors[0];
+
+  # Fix up config
+  my $acfg=new Config::IniFiles( -file => $ad) or die "Unable to open $ad".$Config::IniFiles::errors[0];
+
+  my $section='default';
+  $acfg->newval($section,'target',$global->{deploydir}) or die "Unable to set target";
+  $acfg->newval($section,'deploy-runtime',$global->{runtime}) or die "Unable to set runtime";
+  $acfg->newval($section,'deploy-service',join ' ',myservices()) or die "Unable to set deploy-service";
+  $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
+
+  # Workaround since auth doesn't have a deploy-client target
+  my $dc=$bcfg->val($section,'deploy-client');
+  $dc=~s/auth,//;
+  $acfg->newval($section,'deploy-client',$dc) or die "Unable to set deploy-client";
+
+
+  $acfg->WriteConfig($ad) or die "Unable to write $ad";
+  return 1;
 }
 
 sub prepare_service {
@@ -341,6 +372,43 @@ sub redeploy_service {
   }
  
   return 0;
+}
+
+sub auto_deploy {
+  my $LOGFILE="/tmp/deploy.log";
+  my $KB_DEPLOY=$global->{deploydir};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  my $MAKE_OPTIONS=$global->{'make-options'};
+  my $target=shift;
+
+  # Extingush all traces of previous deployments
+  my $d=`date +%s`;
+  chomp $d;
+  rename($KB_DEPLOY,"$KB_DEPLOY.$d") if -e $KB_DEPLOY;
+  mysystem("rm -rf $KB_DC") if (-e $KB_DC);
+
+  # Empty log file
+  unlink $LOGFILE if ( -e $LOGFILE );
+
+  # Create the dev container and some common dependencies
+  deploy_devcontainer($LOGFILE) unless ( -e "$KB_DEPLOY/bin/compile_typespec" );
+
+  prepare_service($LOGFILE,$KB_DC,@_);
+  chdir("$KB_DC");
+
+  print "Starting bootstrap $KB_DC\n";
+  mysystem("./bootstrap $KB_RT");
+
+  if ( ! -e $KB_DEPLOY ){
+    mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";
+  }
+  # Copy the deployment config from the reference copy
+  my $ad=$KB_DC."/autodeploy.cfg";
+  generate_autodeploy($ad);
+
+  print "Running auto deploy\n";
+  mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
 }
 
 sub deploy_service {
