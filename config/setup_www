@@ -49,7 +49,7 @@ sub printserv{
      next if $sc->{proxytype} eq 'skip';
      next if $sc->{type} eq 'worker';
      #print "Service; $s\n";
-     die "Port not defined for $s\n" if ! defined $sc->{port};
+     die "Port not defined for $s\n" if ! defined $sc->{'service-port'};
      if ($ssl){
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
        fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
@@ -69,7 +69,7 @@ sub proxy {
   my $s=shift;
 
   print $fh "        location /services/$s->{urlname} {\n";
-  print $fh "            proxy_pass http://".$s->{host}.":".$s->{port}."/",$s->{base}.";\n";
+  print $fh "            proxy_pass http://".$s->{host}.":".$s->{'service-port'}."/",$s->{base}.";\n";
   print $fh "        }\n";
 
 }
@@ -82,7 +82,7 @@ sub fastcgi {
   print $fh "        location /services/$service {\n";
   print $fh "            # host and port to fastcgi server\n";
   print $fh "            rewrite /services/$service(.*) \$1 break;\n";
-  print $fh "            fastcgi_pass ".$s->{host}.":".$s->{port}.";\n";
+  print $fh "            fastcgi_pass ".$s->{host}.":".$s->{'service-port'}.";\n";
   print $fh "            fastcgi_param PATH_INFO \$fastcgi_script_name;\n";
   print $fh "            fastcgi_param REQUEST_METHOD \$request_method;\n";
   print $fh "            fastcgi_param QUERY_STRING \$query_string;\n";
