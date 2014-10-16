@@ -6,13 +6,15 @@ use KBDeploy;
 use strict;
 
 my $hashfile;
+my $DF="/root/deploy.done";
 
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
 
-exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
+exit if -e $DF && $ARGV[0] ne '-f';
 
 my $cfg=read_config();
+my $MAKE_OPTIONS=$cfg->{global}->{'make-options'};
 
 my $LOGFILE="/tmp/deploy.log";
 my $KB_DC=$cfg->{'global'}->{devcontainer};
@@ -25,28 +27,15 @@ my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDis
 #uploader
 #search
 
-deploy_service('',@sl);
-
-
-chdir($KB_DC.'/modules');
-opendir(my $dh, './') || die "can't opendir ./: $!";
-my @modules = grep { ! /^\./ && -d "./$_" } readdir($dh);
-closedir $dh;
-
-for my $_ (@modules){
-    print "$_\n";
-    next if /auth_service/;
-    next if /kb_model_seed/;
-    chdir("$KB_DC/modules/$_");
-    my $target='deploy-client';
-    $target='deploy' if (/auth/);
-    mysystem(". $KB_DC/user-env.sh;make $target >> $LOGFILE 2>&1");
-}
-chdir "$KB_DC/modules/invocation";
-mysystem(". $KB_DC/user-env.sh;make deploy >> $LOGFILE 2>&1");
+my $ad=$KB_DC."/autodeploy.cfg";
+KBDeploy::generate_autodeploy($ad);
+print "Running auto deploy\n";
+chdir $KB_DC;
+mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
 
 start_service('invocation');
 
-my $target=$cfg->{'global'}->{deploydir}."/services/invocation";
-#Need to test
-#mysystem("sed -i 's/\/\/.*\/services\/invocation/\/\/next.kbase.us\/services\/invocation/' $target/webroot/Iris/iris.html");
+start_service('invocation');
+open(D,"> $DF");
+print D "Done\n";
+close D;

@@ -176,6 +176,7 @@ sub mkhashfile {
     my $s=$cfg->{services}->{$service}; 
     next if $s->{giturl} eq 'none';
     my $tag=KBDeploy::gittag($service);
+    print STDERR "Problem with $service\n" unless length($tag)>0;
     
     $out.="$service $s->{giturl} $tag\n";
   }

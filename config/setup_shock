@@ -25,10 +25,19 @@ my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 # Fix up config
 
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+$mcfg->setval('Address','api-port',$cfg->{services}->{shock}->{'port'});
 
 $mcfg->setval('Mongodb','hosts',$cfg->{services}->{shock}->{'mongodb-host'});
 $mcfg->newval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
 $mcfg->newval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
 $mcfg->newval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
+
+$mcfg->setval('Paths','site',$cfg->{services}->{shock}->{'site'});
+$mcfg->setval('Paths','data',$cfg->{services}->{shock}->{'data'});
+$mcfg->setval('Paths','logs',$cfg->{services}->{shock}->{'logs'});
+
+$mcfg->setval('Runtime','GOMAXPROCS',$cfg->{services}->{shock}->{'gomaxprocs'});
+
+$mcfg->WriteConfig($file);
 
 start_service('shock');

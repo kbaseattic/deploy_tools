@@ -12,8 +12,8 @@ my $DC="/kb/dev_container";
 my $cfg=read_config();
 my $hashfile;
 
-my $narrhost=$cfg->{services}->{narrative}->{service-url};
-$narrhost=~s/http.*\/\///;
+my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
+$narr_host=~s/http.*\/\///;
 
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
