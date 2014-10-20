@@ -29,7 +29,7 @@ switch ($command) {
   case /syncdt/ {
     sync_dt();
   }
-  case /deploy/ {
+  case /^deploy/ {
     deploy_services(@ARGV);
   }
   case /updatehostassignments/ {
@@ -44,8 +44,11 @@ switch ($command) {
   case /mkhashfile$/ {
      mkhashfile();
   }
+  case /resetdeploy/ {
+     resetdeploy();
+  }
   else {
-    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|mkhashfile>\n";
+    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|mkhashfile|resetdeploy>\n";
     exit 1;
   }
 }
@@ -186,3 +189,12 @@ sub mkhashfile {
   close TF;
 }
 
+# Removes done file
+#
+# TODO: Make this cleaner
+sub resetdeploy{
+   my $list=KBDeploy::hostlist();
+
+   KBProvision::run_remote_all($list,"rm -f /root/deploy.done");
+   return 1;
+}

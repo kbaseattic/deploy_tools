@@ -269,7 +269,7 @@ sub start_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
     if ( -e "$KB_DEPLOY/services/$spath/start_service" ) {
-      mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service");
+      mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service &");
     }
     else {
       print "No start script found in $s\n";
@@ -308,7 +308,15 @@ sub generate_autodeploy{
   my $section='default';
   $acfg->newval($section,'target',$global->{deploydir}) or die "Unable to set target";
   $acfg->newval($section,'deploy-runtime',$global->{runtime}) or die "Unable to set runtime";
-  $acfg->newval($section,'deploy-service',join ' ',myservices()) or die "Unable to set deploy-service";
+  my $dlist;
+  $dlist->{'deploy'}=[];
+  $dlist->{'deploy-service'}=[];
+  for my $s (myservices()){
+    my $dt=$cfg->{services}->{$s}->{'auto-deploy-target'};
+    push @{$dlist->{$dt}},$reponame{$s}; 
+  }
+  $acfg->newval($section,'deploy-master',join ',',@{$dlist->{deploy}}) or die "Unable to set deploy-service";
+  $acfg->newval($section,'deploy-service',join ',',@{$dlist->{'deploy-service'}}) or die "Unable to set deploy-service";
   $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
 
   # Workaround since auth doesn't have a deploy-client target
@@ -380,7 +388,6 @@ sub auto_deploy {
   my $KB_DC=$global->{devcontainer};
   my $KB_RT=$global->{runtime};
   my $MAKE_OPTIONS=$global->{'make-options'};
-  my $target=shift;
 
   # Extingush all traces of previous deployments
   my $d=`date +%s`;
@@ -399,6 +406,9 @@ sub auto_deploy {
 
   print "Starting bootstrap $KB_DC\n";
   mysystem("./bootstrap $KB_RT");
+
+  print "Running make\n";
+  mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
   if ( ! -e $KB_DEPLOY ){
     mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";

@@ -29,7 +29,7 @@ exit unless $redeploy;
 
 stop_service(@sl);
 
-deploy_service('deploy',@sl);
+KBDeploy::auto_deploy(@sl);
 
 start_service(@sl);
 open(D,"> $DF");
