@@ -9,8 +9,6 @@ use strict;
 
 my $hashfile;
 
-my $DF="/root/deploy.done";
-
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
 
@@ -20,7 +18,7 @@ my @sl=myservices();
 exit unless scalar(@sl);
 
 mkdocs(@sl);
-exit if -e $DF && $ARGV[0] ne '-f';
+exit if (KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
 #
 # redploy_service will tell us if we need to repeploy but
 # it also populates that hashes to deploy
@@ -32,6 +30,5 @@ stop_service(@sl);
 KBDeploy::auto_deploy(@sl);
 
 start_service(@sl);
-open(D,"> $DF");
-print D "Done\n";
-close D;
+
+KBDeploy::mark_complete(@sl);

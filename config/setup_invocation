@@ -6,12 +6,11 @@ use KBDeploy;
 use strict;
 
 my $hashfile;
-my $DF="/root/deploy.done";
 
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
 
-exit if -e $DF && $ARGV[0] ne '-f';
+exit if (KBDeploy::is_complete('invocation') && $ARGV[0] ne '-f');
 
 my $cfg=read_config();
 my $MAKE_OPTIONS=$cfg->{global}->{'make-options'};
@@ -36,6 +35,4 @@ mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
 start_service('invocation');
 
 start_service('invocation');
-open(D,"> $DF");
-print D "Done\n";
-close D;
+KBDeploy::mark_complete(@sl);

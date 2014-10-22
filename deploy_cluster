@@ -55,7 +55,7 @@ switch ($command) {
 
 
 sub update_available {
-  my $cfg->{nodes}->{used}=KBProvision::assignments($global->{xcatgroup});
+  $cfg->{nodes}->{used}=KBProvision::assignments($global->{xcatgroup});
 
   # Create a list of nodes that can be used
   for (my $i=1;$i<=$global->{maxnodes};$i++){
@@ -76,14 +76,14 @@ sub configure_vms {
     print "Service: $service\n" if $debug;
     my $scfg=$cfg->{services}->{$service};
     if (! defined $scfg->{host}){
-      print "- Configue $service\n" if $debug;
+      print "- Configure $service\n" if $debug;
       my $host=shift @{$cfg->{nodes}->{available}} or die "No more nodes to allocate";
       print "- Assigning $host to $service\n";
       KBProvision::config_host($host,$service,$scfg);
       KBDeploy::update_config($cfgfile,$service,'host',$host);
     }
     else{
-      print "- Configured using $scfg->{host}\n" if $debug;
+      print "- Configured using $scfg->{host}\n" if $debug>1;
     }
   }
 }

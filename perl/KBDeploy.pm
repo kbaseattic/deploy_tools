@@ -39,6 +39,9 @@ else {
   die "Unable to find config file\n";
 }
 
+# TODO: Make a parameter or more clever
+my $DONEFILE="/root/deploy.done";
+
 
 # repo is hash that points to the git repo.  It should work for both the
 # service name in the config file as well as the git repo name
@@ -482,5 +485,29 @@ sub mkdocs {
   } 
 }
 
+# Use this to mark as service/node as deployed
+#  Dirt simple semphor flag for now
+# TODO: mark services indvidually
+#
+sub mark_complete {
+  my @services=@_;
+  open(D,"> $DONEFILE");
+  print D "Done\n";
+  close D;
+}
+
+# Use this to determine if a node is already finished
+#
+sub is_complete {
+  my @services=@_;
+  if ( -e $DONEFILE ) {
+    return 1;
+  }
+  return 0;
+}
+
+sub reset_complete {
+  unlink $DONEFILE;
+}
 
 1;
