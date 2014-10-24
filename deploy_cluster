@@ -124,7 +124,7 @@ sub deploy_services{
      #Now run the local scripts
      for my $service (@{$cfg->{servicelist}}){
        my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
-       print "Runnig $script on $service\n";
+       print "Running $script on $service\n";
        mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
      }
    }

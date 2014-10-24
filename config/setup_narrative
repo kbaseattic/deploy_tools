@@ -29,7 +29,8 @@ if ($ARGV[0] eq 'bootstrap' ){
   exit;
 }
 
-exit unless $ARGV[0] eq '-f';
+exit if (KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
+
 mkdir "/kb/deployment" unless -e "/kb/deployment";
 KBDeploy::clonetag('bootstrap') unless -e "$DC/bootstrap";
 KBDeploy::clonetag('narrative') unless -e "$DC/narrative";
@@ -40,7 +41,11 @@ mysystem("yes|/bin/sh narrative/docker/lua-dependencies.txt") unless -e "/usr/lo
 
 
 chdir "$DC/ui-common";
+print "Deploying ui-common\n";
 mysystem("./deployFunctionalSite.sh > /dev/null");
+
+# Copy lua files
+cp $DC/narrative/docker/*.lua /kb/deployment/services/narrative/docker/
 
 # TODO:  Remove refernces to next.  Get it from config file
 # TODO:  abstract out this recursive grep and sed into a perl function
@@ -57,17 +62,20 @@ mysystem('grep -rl  dev07.berkeley.kbase.us/search /kb/deployment/ui-common 2>/d
 
 # Now for the narrative url
 print "Replacing narrative in ui-common\n";
-mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/"');
+#mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/"');
+mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'"');
 
 # Build docker
 chdir "$DC/narrative" or die "Unable to change dir";
 print "Replacing kbase in narrative $DC/narrative\n";
 mysystem('grep -rl //kbase.us/services '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" || echo "Done" ');
-mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/" || echo "Done" ');
+#mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/" || echo "Done" ');
+mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
 # Now for the narrative url
 print "Running buildNarrativeContainer\n";
 mysystem("sh ./buildNarrativeContainer.sh");
 
+KBDeploy::mark_complete(@sl);
 
 sub bootstrap {
   if ( ! -e "/usr/bin/pip") {

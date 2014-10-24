@@ -186,7 +186,7 @@ sub clonetag {
     chdir("../");
   }
   else {
-    mysystem("git clone $repo{$package} > /dev/null 2>&1");
+    mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
   }
   if ( $mytag ne "head" ) {
     chdir $package;
@@ -290,6 +290,8 @@ sub stop_service {
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
+# don't care about return value here (really bad style, I know)
+      system("pkill -f glassfish");
     }
   }
 }
@@ -303,7 +305,7 @@ sub generate_autodeploy{
   mysystem("cp $cfgfile $ad");
 
   # TODO: Remove the need to read in bootstrap.cfg
-  my $bcfg=new Config::IniFiles( -file => $KB_DC."/bootstrap.cfg") or die "Unable to open bootstrap".$Config::IniFiles::errors[0];
+#  my $bcfg=new Config::IniFiles( -file => $KB_DC."/bootstrap.cfg") or die "Unable to open bootstrap".$Config::IniFiles::errors[0];
 
   # Fix up config
   my $acfg=new Config::IniFiles( -file => $ad) or die "Unable to open $ad".$Config::IniFiles::errors[0];
@@ -323,10 +325,43 @@ sub generate_autodeploy{
   $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
 
   # Workaround since auth doesn't have a deploy-client target
-  my $dc=$bcfg->val($section,'deploy-client');
-  $dc=~s/auth,//;
-  $acfg->newval($section,'deploy-client',$dc) or die "Unable to set deploy-client";
+#  my $dc=$bcfg->val($section,'deploy-client');
+#  $dc=~s/auth,//;
 
+  # new: read directory listing and deploy those clients
+  my $module_dir=$KB_DC.'/modules/';
+  opendir MODULEDIR,$module_dir || die "couldn't open $module_dir: $!";
+  my @dc;
+  while (my $module=readdir(MODULEDIR))
+  {
+#    warn $module;
+#   skip these names
+    my @skip=qw(
+..
+.
+README
+auth
+kb_model_seed
+);
+    my %skip=map {$_=>1} @skip;
+    next if $skip{$module};
+
+#    next if ($module eq '..');
+#    next if ($module eq '.');
+#    next if ($module eq 'README');
+  # keeping workaround since auth doesn't have a deploy-client target
+#    next if ($module eq 'auth');
+# this should work, eh?
+#    next unless (-d $KB_DC.'/'.$module);
+
+#    warn 'accepting module ' . $module;
+    push @dc,$module;
+  }
+  closedir MODULEDIR;
+
+#  $acfg->newval($section,'deploy-client',$module) or die "Unable to set deploy-client";
+  my $dc=join ', ',sort @dc;
+  $acfg->newval($section,'deploy-client',$dc) or die "Unable to set deploy-client";
 
   $acfg->WriteConfig($ad) or die "Unable to write $ad";
   return 1;
@@ -491,6 +526,8 @@ sub mkdocs {
 #
 sub mark_complete {
   my @services=@_;
+  print 'Services deployed successfully: ' . join ', ', @services;
+  print "\n";
   open(D,"> $DONEFILE");
   print D "Done\n";
   close D;
