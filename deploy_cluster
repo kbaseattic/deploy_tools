@@ -27,7 +27,7 @@ switch ($command) {
     KBProvision::boot_nodes($global->{xcatgroup});
   }
   case /syncdt/ {
-    sync_dt();
+    sync_dt(@ARGV);
   }
   case /^deploy/ {
     deploy_services(@ARGV);
@@ -96,7 +96,9 @@ sub sync_dt {
    # Push out the scripts
    my $fl=join " ",@_;
    my $list=KBDeploy::hostlist();
+   $list=$fl if $fl;
 
+   warn "syncing dt to hosts $list";
    KBProvision::run_remote_all($list,"[ -e $basedir ] || mkdir $basedir");
    mysystem("xdcp $list $0 $basedir/$0");
    mysystem("xdcp $list $cfgfile $basedir/$cfgfile");

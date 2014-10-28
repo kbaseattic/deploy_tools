@@ -69,6 +69,7 @@ sub proxy {
   my $s=shift;
 
   print $fh "        location /services/$s->{urlname} {\n";
+  print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n" if ($s->{urlname} eq 'search');
   print $fh "            proxy_pass http://".$s->{host}.":".$s->{'service-port'}."/",$s->{base}.";\n";
   print $fh "        }\n";
 
@@ -80,6 +81,7 @@ sub fastcgi {
   my $s=shift;
 
   print $fh "        location /services/$service {\n";
+#  print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n";
   print $fh "            # host and port to fastcgi server\n";
   print $fh "            rewrite /services/$service(.*) \$1 break;\n";
   print $fh "            fastcgi_pass ".$s->{host}.":".$s->{'service-port'}.";\n";
