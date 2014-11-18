@@ -272,6 +272,7 @@ sub start_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
     if ( -e "$KB_DEPLOY/services/$spath/start_service" ) {
+      warn "Starting service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service &");
     }
     else {
@@ -289,6 +290,7 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
+      warn "Stopping service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
 # don't care about return value here (really bad style, I know)
       system("pkill -f glassfish");
@@ -499,6 +501,21 @@ sub deploy_service {
   return if $target eq '';
   print "Running make $target\n";
   mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS >> $LOGFILE 2>&1");
+
+}
+
+sub postprocess {
+  my $LOGFILE="/tmp/deploy.log";
+  my $KB_DEPLOY=$global->{deploydir};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  for my $serv (@_) {
+    if (-e "${FindBin::Bin}/postprocess_$serv") {
+      warn "postprocessing service $serv";
+      mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/postprocess_$serv >> $LOGFILE 2>&1");
+#      stop_service($serv);
+    }
+  }
 
 }
 
