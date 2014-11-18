@@ -29,6 +29,9 @@ stop_service(@sl);
 
 KBDeploy::auto_deploy(@sl);
 
+KBDeploy::postprocess(@sl);
+
+#stop_service(@sl);
 start_service(@sl);
 
 KBDeploy::mark_complete(@sl);
