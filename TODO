@@ -1,3 +1,32 @@
+for ci-:
+- add DNS entries for ci.kbase.us, narrative-ci.kbase.us
+- add public interfaces for ci.kbase, narrative-ci
+- update hosts files
+- loop over mongo connection in setup_mongo, keep trying till works (or takes too long)
+- add needed packages to master image (or at least to nodes post-create)
+== (narrative needs libssl-dev)
+-- apt-get install -y bzr cvs libcurl4-gnutls-dev mysql-client libgd2-noxpm libssl-dev
+- automate adding ufw rules to -www
+- redirect rule to send ci.kbase.us to narrative-ci
+- automate creating my.cnf file (in particular bind-address)
+- automate putting handlemanager on same host as workspace
+- how is hsi db being created?  (need to get hsi.sql file from github repo)
+- need to bootstrap ws? (from readme.md: Run administration/initialize.py and follow the instructions; also add types)
+- bootstrap shock: create dirs (create separate vol?)
+- add port to shock.cfg file
+- disable apache
+- bootstrapping for invocation svc (one-off: ran setup_service on node)
+- autodeploy tools have git.kbase.us hardcoded for all clones (using clonetag; not ported back to install)
+
+- figure out ci-narrative bootstrap
+-- install docker (+ update kernel if ubuntu 12.04) (see Readme-deployment.md)
+-- mkdir -p /kb/deployment/services/narrative/docker/ (?)
+-- after docker install, deploy_cluster should be ok
+-- install nginx-extras and configure
+--- lua_package_path
+-- ssl certs
+-- need extra nameserver in resolv.conf? (narrative-next configured this way)
+
 - change cluster.ini to deployment.cfg
 - workspace still requires a special step
 - Add something for external network interface to config file 
@@ -9,3 +38,6 @@ Completed
 - Add ability to tag current head and insert tag into cluster.ini file
 - add mysql-client to base (added to bootstrape_node which is still evolving)
 - Split up deploy_service for the git checkout portion and the build step
+
+complete for ci-:
+- figure out mongo auth config so setup_mongo works
