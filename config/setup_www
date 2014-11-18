@@ -53,10 +53,13 @@ sub printserv{
      if ($ssl){
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
        fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
+       docs($new,$s,$sc);
+       mkdir "/kb/docs/services/$s";
+       mkdir "/kb/docs/services/docs/$sc->{basedir}";
      }
      else{
-       docs($new,$s,$sc);
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
+       docs($new,$s,$sc);
        mkdir "/kb/docs/services/$s";
        mkdir "/kb/docs/services/docs/$sc->{basedir}";
      }
