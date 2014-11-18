@@ -119,7 +119,7 @@ sub docs {
 sub bootstrap {
   mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
   system("dpkg -l |grep -c  python-software-properties > /dev/null");
-  mysystem("apt-get install python-software-properties") unless $? eq 0;
+  mysystem("apt-get -y install python-software-properties") unless $? eq 0;
 
   mysystem("echo ''|add-apt-repository ppa:nginx/stable;apt-get update;apt-get install -y nginx") unless -e "/etc/apt/sources.list.d/nginx-stable-precise.list";
   mysystem("[ -e /usr/sbin/nginx ] || apt-get -y install nginx");
