@@ -5,6 +5,7 @@ use warnings;
 use Config::IniFiles;
 use Data::Dumper;
 use FindBin;
+use Cwd;
 
 use Carp;
 use Exporter;
@@ -179,6 +180,8 @@ sub clonetag {
   $dir=~s/\/$//;
   $dir=~s/.*\///;
   if ( -e $dir ) {
+    warn getcwd();
+    warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
     mysystem("git checkout master  > /dev/null 2>&1");
@@ -186,6 +189,8 @@ sub clonetag {
     chdir("../");
   }
   else {
+    warn "trying to clone $package";
+    warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
   }
   if ( $mytag ne "head" ) {
@@ -302,6 +307,8 @@ sub stop_service {
 # Generate auto deploy
 sub generate_autodeploy{
   my $ad=shift;
+  # this will be an arrayref
+  my $override_dc=shift;
   my $KB_DC=$global->{devcontainer};
 
   mysystem("cp $cfgfile $ad");
@@ -363,6 +370,10 @@ kb_model_seed
 
 #  $acfg->newval($section,'deploy-client',$module) or die "Unable to set deploy-client";
   my $dc=join ', ',sort @dc;
+  if (ref $override_dc and scalar @{$override_dc} > 0)
+  {
+    $dc=join ', ', @{$override_dc};
+  }
   $acfg->newval($section,'deploy-client',$dc) or die "Unable to set deploy-client";
 
   $acfg->WriteConfig($ad) or die "Unable to write $ad";

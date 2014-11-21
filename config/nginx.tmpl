@@ -30,6 +30,22 @@ server {
 		autoindex off;
 	}
 
+        # TODO: remove hard-coded communities section
+        location /services/communities/ {
+                sub_filter api.metagenomics.anl.gov kbase.us/services/communities;
+                sub_filter_once off;
+                sub_filter_types application/json;
+                if ( $request_filename ~ api.html ) {
+                   rewrite ^ http://kbase.us/services/communities/api.kbase.html permanent;
+                }
+                proxy_pass http://api.metagenomics.anl.gov/;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Real-IP $remote_addr;
+            #proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+
         #%INCLUDE%
 
 }
@@ -75,6 +91,21 @@ server {
         location /images {
                 root /usr/share;
                 autoindex off;
+        }
+
+        # TODO: remove hard-coded communities section
+        location /services/communities/ {
+                sub_filter api.metagenomics.anl.gov kbase.us/services/communities;
+                sub_filter_once off;
+                sub_filter_types application/json;
+                if ( $request_filename ~ api.html ) {
+                   rewrite ^ http://kbase.us/services/communities/api.kbase.html permanent;
+                }
+                proxy_pass http://api.metagenomics.anl.gov/;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Real-IP $remote_addr;
+            #proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
         }
 
 	#%SSLINCLUDE%

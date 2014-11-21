@@ -32,6 +32,11 @@ for ci-:
 - Add something for external network interface to config file 
 - merge back setup scripts into deploy_cluster
 
+for invocation:
+- communities_api needs kbrest_common scripts deployed to dev_container
+- communities_api needs communities svc deployed first (generates docs from there)
+- still some services which do not successfully deploy under invocation (see setup_invocation)
+
 Completed
 - remove need to specify config file and 'global'
 - change shock and awe config files to be generated from ini file
