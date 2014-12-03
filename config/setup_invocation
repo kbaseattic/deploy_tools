@@ -20,14 +20,28 @@ my $KB_DC=$cfg->{'global'}->{devcontainer};
 
 stop_service('invocation');
 
-my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'trees', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'meme', 'networks','CoExpression', 'KBaseExpression');
+# these are service names
+#my @sl=('Workspace','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'trees', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'meme', 'networks','CoExpression', 'KBaseExpression');
+my @sl=('jars', 'invocation','cdmi_api', 'kbrest_common', 'typecomp', 'communities_api', 'matR', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'meme', 'networks','CoExpression', 'KBaseExpression');
+
+# these are repo names (would like to calculate from @sl)
+#my @override_dc=('workspace_deluxe','invocation','cdmi_api', 'translation', 'CompressionBasedDistance', 'protein_info_service', 'trees', 'fbaModelServices', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'meme', 'networks','coexpression', 'KBaseExpression');
+# build fails: workspace (deploy-client doesn't work), trees (deploy-client doesn't work), KBaseExpression (doesn't exist),  meme (needs #include in typecomp), networks (not sure)
+my @override_dc=('invocation','kb_seed', 'kbrest_common', 'jars', 'communities_api', 'translation', 'matR', 'cbd', 'protein_info_service', 'KBaseFBAModeling', 'probabilistic_annotation', 'genome_annotation', 'genotype_phenotype_api', 'idserver', 'handle_service', 'ontology_service', 'plant_expression_service','kmer_annotation_figfam', 'coexpression');
 
 #m5nr
 #uploader
 #search
 
 my $ad=$KB_DC."/autodeploy.cfg";
-KBDeploy::generate_autodeploy($ad);
+KBDeploy::generate_autodeploy($ad,\@override_dc);
+chdir "$KB_DC/modules";
+foreach my $svc (@sl)
+{
+  warn "cloning $svc";
+  KBDeploy::clonetag($svc);
+}
+
 print "Running auto deploy\n";
 chdir $KB_DC;
 mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");

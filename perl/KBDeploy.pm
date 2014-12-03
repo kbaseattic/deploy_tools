@@ -5,6 +5,7 @@ use warnings;
 use Config::IniFiles;
 use Data::Dumper;
 use FindBin;
+use Cwd;
 
 use Carp;
 use Exporter;
@@ -179,6 +180,8 @@ sub clonetag {
   $dir=~s/\/$//;
   $dir=~s/.*\///;
   if ( -e $dir ) {
+    warn getcwd();
+    warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
     mysystem("git checkout master  > /dev/null 2>&1");
@@ -186,6 +189,8 @@ sub clonetag {
     chdir("../");
   }
   else {
+    warn "trying to clone $package";
+    warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
   }
   if ( $mytag ne "head" ) {
@@ -272,6 +277,7 @@ sub start_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
     if ( -e "$KB_DEPLOY/services/$spath/start_service" ) {
+      warn "Starting service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service &");
     }
     else {
@@ -289,6 +295,7 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
+      warn "Stopping service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
 # don't care about return value here (really bad style, I know)
       system("pkill -f glassfish");
@@ -300,6 +307,8 @@ sub stop_service {
 # Generate auto deploy
 sub generate_autodeploy{
   my $ad=shift;
+  # this will be an arrayref
+  my $override_dc=shift;
   my $KB_DC=$global->{devcontainer};
 
   mysystem("cp $cfgfile $ad");
@@ -336,12 +345,14 @@ sub generate_autodeploy{
   {
 #    warn $module;
 #   skip these names
+# should workspace be in here?  its deploy-client target doesn't work right
     my @skip=qw(
 ..
 .
 README
 auth
 kb_model_seed
+workspace_deluxe
 );
     my %skip=map {$_=>1} @skip;
     next if $skip{$module};
@@ -361,6 +372,10 @@ kb_model_seed
 
 #  $acfg->newval($section,'deploy-client',$module) or die "Unable to set deploy-client";
   my $dc=join ', ',sort @dc;
+  if (ref $override_dc and scalar @{$override_dc} > 0)
+  {
+    $dc=join ', ', @{$override_dc};
+  }
   $acfg->newval($section,'deploy-client',$dc) or die "Unable to set deploy-client";
 
   $acfg->WriteConfig($ad) or die "Unable to write $ad";
@@ -499,6 +514,21 @@ sub deploy_service {
   return if $target eq '';
   print "Running make $target\n";
   mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS >> $LOGFILE 2>&1");
+
+}
+
+sub postprocess {
+  my $LOGFILE="/tmp/deploy.log";
+  my $KB_DEPLOY=$global->{deploydir};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  for my $serv (@_) {
+    if (-e "${FindBin::Bin}/postprocess_$serv") {
+      warn "postprocessing service $serv";
+      mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/postprocess_$serv >> $LOGFILE 2>&1");
+#      stop_service($serv);
+    }
+  }
 
 }
 
