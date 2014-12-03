@@ -12,6 +12,10 @@ my $DC="/kb/dev_container";
 my $cfg=read_config();
 my $hashfile;
 
+my @sl=myservices();
+exit unless scalar(@sl);
+warn "sl is " . join ':',@sl;
+
 my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
 $narr_host=~s/http.*\/\///;
 
@@ -45,7 +49,7 @@ print "Deploying ui-common\n";
 mysystem("./deployFunctionalSite.sh > /dev/null");
 
 # Copy lua files
-cp $DC/narrative/docker/*.lua /kb/deployment/services/narrative/docker/
+mysystem("cp $DC/narrative/docker/*.lua /kb/deployment/services/narrative/docker/");
 
 # TODO:  Remove refernces to next.  Get it from config file
 # TODO:  abstract out this recursive grep and sed into a perl function
@@ -75,7 +79,7 @@ mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i
 print "Running buildNarrativeContainer\n";
 mysystem("sh ./buildNarrativeContainer.sh");
 
-KBDeploy::mark_complete(@sl);
+KBDeploy::mark_complete('narrative',@sl);
 
 sub bootstrap {
   if ( ! -e "/usr/bin/pip") {
