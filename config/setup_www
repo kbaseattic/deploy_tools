@@ -53,10 +53,13 @@ sub printserv{
      if ($ssl){
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
        fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
+       docs($new,$s,$sc);
+       mkdir "/kb/docs/services/$s";
+       mkdir "/kb/docs/services/docs/$sc->{basedir}";
      }
      else{
-       docs($new,$s,$sc);
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
+       docs($new,$s,$sc);
        mkdir "/kb/docs/services/$s";
        mkdir "/kb/docs/services/docs/$sc->{basedir}";
      }
@@ -69,7 +72,12 @@ sub proxy {
   my $s=shift;
 
   print $fh "        location /services/$s->{urlname} {\n";
+  print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n" if ($s->{urlname} eq 'search');
   print $fh "            proxy_pass http://".$s->{host}.":".$s->{'service-port'}."/",$s->{base}.";\n";
+  print $fh '            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for' . ";\n";
+  print $fh '            proxy_set_header X-Real-IP $remote_addr' . ";\n";
+  print $fh '            proxy_set_header Host $http_host' . ";\n";
+  print $fh '            proxy_set_header X-Forwarded-Proto $scheme' . ";\n";
   print $fh "        }\n";
 
 }
@@ -80,6 +88,7 @@ sub fastcgi {
   my $s=shift;
 
   print $fh "        location /services/$service {\n";
+#  print $fh "            add_header Access-Control-Allow-Origin \$http_origin;\n";
   print $fh "            # host and port to fastcgi server\n";
   print $fh "            rewrite /services/$service(.*) \$1 break;\n";
   print $fh "            fastcgi_pass ".$s->{host}.":".$s->{'service-port'}.";\n";
@@ -113,7 +122,7 @@ sub docs {
 sub bootstrap {
   mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
   system("dpkg -l |grep -c  python-software-properties > /dev/null");
-  mysystem("apt-get install python-software-properties") unless $? eq 0;
+  mysystem("apt-get -y install python-software-properties") unless $? eq 0;
 
   mysystem("echo ''|add-apt-repository ppa:nginx/stable;apt-get update;apt-get install -y nginx") unless -e "/etc/apt/sources.list.d/nginx-stable-precise.list";
   mysystem("[ -e /usr/sbin/nginx ] || apt-get -y install nginx");
