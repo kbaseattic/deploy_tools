@@ -170,10 +170,12 @@ sub mysystem {
 sub clonetag {
   my $package=shift;
   my $mytag=$cfg->{services}->{$reponame2service{$package}}->{hash};
+  my $mybranch=$cfg->{services}->{$reponame2service{$package}}->{'git-branch'};
 
   $mytag="head" if ! defined $mytag; 
+  $mybranch="master" if ! defined $mybranch; 
   $mytag=$global->{tag} if defined $global->{tag};
-  print "$package $mytag\n";
+  print "$package $mytag $mybranch\n";
 
   print "- Cloning $package\n";
   my $dir=$repo{$package};
@@ -184,7 +186,7 @@ sub clonetag {
     warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
-    mysystem("git checkout master  > /dev/null 2>&1");
+    mysystem("git checkout $mybranch  > /dev/null 2>&1");
     mysystem("git pull  > /dev/null 2>&1");
     chdir("../");
   }
@@ -192,10 +194,19 @@ sub clonetag {
     warn "trying to clone $package";
     warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
+    chdir $package;
+    mysystem("git checkout $mybranch > /dev/null 2>&1");
+    chdir "../";
   }
   if ( $mytag ne "head" ) {
     chdir $package;
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
+    chdir "../";
+  }
+  if ( $mybranch ne "master" ) {
+    warn "checking out branch $mybranch";
+    chdir $package;
+    mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
   # Save the stats
@@ -299,6 +310,23 @@ sub stop_service {
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
 # don't care about return value here (really bad style, I know)
       system("pkill -f glassfish");
+    }
+  }
+}
+
+sub test_service {
+  my $KB_DC=$global->{devcontainer};
+  for my $s (@_)  {
+    my $spath=$s;
+# need the git checkout dir name here
+    my $giturl=$cfg->{services}->{$s}->{giturl} if (defined $cfg->{services}->{$s}->{giturl});
+    ($spath)=$giturl=~/.*\/(.+)$/ if ($giturl);
+    if ( -e "$KB_DC/modules/$spath" ) {
+      warn "Testing service $s\n";
+      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;make -n test");
+    }
+    else {
+      print "No start script found in $s\n";
     }
   }
 }
@@ -536,9 +564,12 @@ sub gittag {
   my $service=shift;
   
   my $repo=$repo{$service};
-  my $tag=`git ls-remote $repo HEAD`;
+  my $mybranch=$cfg->{services}->{$repo};
+
+  $mybranch="master" if ! defined $mybranch; 
+  my $tag=`git ls-remote $repo heads/$mybranch`;
   chomp $tag;
-  $tag=~s/\tHEAD//;
+  $tag=~s/\t.*//;
   return $tag;
 }
 
