@@ -315,6 +315,7 @@ sub stop_service {
 }
 
 sub test_service {
+  my $LOGFILE="/tmp/test.log";
   my $KB_DC=$global->{devcontainer};
   for my $s (@_)  {
     my $spath=$s;
@@ -323,7 +324,9 @@ sub test_service {
     ($spath)=$giturl=~/.*\/(.+)$/ if ($giturl);
     if ( -e "$KB_DC/modules/$spath" ) {
       warn "Testing service $s\n";
-      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;make -n test");
+      # not sure why it's not picking up DEPLOY_RUNTIME
+      # need to fix this at some point, but not essential right now
+      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test >> $LOGFILE");
     }
     else {
       print "No start script found in $s\n";
