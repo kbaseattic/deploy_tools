@@ -33,7 +33,7 @@ sub sync_files {
    my $basedir=shift;
    my $fl=join " ",@_;
    return 1 if $fl eq '';
-   system("pdcp -w $xg $fl $basedir/ > /dev/null 2>&1");
+   system("xdcp $xg $fl $basedir/ > /dev/null 2>&1");
    return 1 if $? eq 0;
    return 0;
 }
