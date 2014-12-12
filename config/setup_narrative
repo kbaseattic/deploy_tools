@@ -18,6 +18,8 @@ warn "sl is " . join ':',@sl;
 
 my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
 $narr_host=~s/http.*\/\///;
+# base URL for references to other services
+my $base_url=$cfg->{global}->{'basename'}. '.kbase.us';
 
 $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
 exit if $ARGV[0] eq 'bootstrap';
@@ -56,13 +58,16 @@ mysystem("cp $DC/narrative/docker/*.lua /kb/deployment/services/narrative/docker
 #
 # Replace kbase.us/serices with new url
 print "Replacing kbase in ui-common\n";
-mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" ');
+#mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" ');
+mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" ');
 
 # Samething for www.kbase.us
-mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/next.kbase.us\/services/g" ');
+#mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/next.kbase.us\/services/g" ');
+mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/' . $base_url . '\/services/g" ');
 
 # Now for the search url
-mysystem('grep -rl  dev07.berkeley.kbase.us/search /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/dev07.berkeley.kbase.us/next.kbase.us\/services/"');
+# this should already be fixed
+#mysystem('grep -rl  dev07.berkeley.kbase.us/search /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/dev07.berkeley.kbase.us/next.kbase.us\/services/"');
 
 # Now for the narrative url
 print "Replacing narrative in ui-common\n";
@@ -72,7 +77,9 @@ mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs
 # Build docker
 chdir "$DC/narrative" or die "Unable to change dir";
 print "Replacing kbase in narrative $DC/narrative\n";
-mysystem('grep -rl //kbase.us/services '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" || echo "Done" ');
+#mysystem('grep -rl //kbase.us/services '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/next.kbase.us\/services/g" || echo "Done" ');
+mysystem('grep -rl //kbase.us/services '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "Done" ');
+
 #mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/" || echo "Done" ');
 mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
 # Now for the narrative url
