@@ -1,0 +1,5 @@
+#!/bin/bash
+
+/kb/deployment/services/PlantExpressionService/stop_service
+sleep 10
+/kb/deployment/services/PlantExpressionService/start_service &
