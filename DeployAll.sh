@@ -17,3 +17,12 @@ grep 'Services deployed successfully' /tmp/deploy.report.$label >> /tmp/deploy.r
 cat /tmp/deploy.report.$label.mail | mail -r 'nightly-build@kbase.us' -s "$label.kbase.us Nightly Build Report" kkeller@lbl.gov scanon@lbl.gov dolson@mcs.anl.gov nightly-build@lists.kbase.us
 # just in case -r doesn't work in cron job
 #cat /tmp/deploy.report.mail | mail -s 'next.kbase.us Nightly Build Report' kkeller@lbl.gov 
+
+logdir=/tmp/deploy_logs/$label/$(date +%F)
+mkdir -p $logdir
+# might be an xcatty-way to do this
+for node in $(nodels $label)
+do
+  scp $node:/tmp/deploy.log $logdir/$node.deploy.log
+  scp $node:/tmp/test.log $logdir/$node.test.log
+done
