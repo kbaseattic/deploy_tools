@@ -79,6 +79,7 @@ sub maprepos {
     # Provide the name for the both the service name and repo name
     $repo{$reponame}=$repo{$s};
     $reponame{$s}=$reponame;
+    $reponame{$reponame}=$reponame;
     $reponame2service{$reponame}=$s;
     $reponame2service{$s}=$s;
   }
@@ -182,8 +183,6 @@ sub clonetag {
   $dir=~s/\/$//;
   $dir=~s/.*\///;
   if ( -e $dir ) {
-    warn getcwd();
-    warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
     mysystem("git checkout $mybranch  > /dev/null 2>&1");
@@ -191,22 +190,16 @@ sub clonetag {
     chdir("../");
   }
   else {
-    warn "trying to clone $package";
-    warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
-    chdir $package;
-    mysystem("git checkout $mybranch > /dev/null 2>&1");
+  }
+  if ( $mybranch ne "master" ) {
+    chdir $reponame{$package};
+    mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
   if ( $mytag ne "head" ) {
-    chdir $package;
+    chdir $reponame{$package};
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
-    chdir "../";
-  }
-  if ( $mybranch ne "master" ) {
-    warn "checking out branch $mybranch";
-    chdir $package;
-    mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
   # Save the stats
@@ -435,6 +428,7 @@ sub readhashes {
     my ($s,$url,$hash)=split;
     $cfg->{services}->{$s}->{hash}=$hash;
     my $confurl=$cfg->{services}->{$s}->{giturl};
+    $confurl="undefined" if ! defined $confurl;
     print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
     print STDERR "Warning: $confurl vs $url\n" if $confurl ne $url;
     $cfg->{services}->{$s}->{hash}=$hash;
@@ -446,7 +440,7 @@ sub readhashes {
 sub redeploy_service {
   my $tagfile=shift; 
 
-  die unless -e $tagfile;
+  die "Tagfile $tagfile not found" unless -e $tagfile;
   readhashes($tagfile);
 # Check hashes
 
@@ -455,6 +449,9 @@ sub redeploy_service {
     print STDERR "Missing hash file $hf\n";
     return 1;
   }
+  return 1;
+
+  # Redo this logic since this will always return 0 
   while(<H>){
     chomp;
     my ($s,$url,$hash)=split;

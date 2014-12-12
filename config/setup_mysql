@@ -17,7 +17,7 @@ if (defined $cfg->{services}->{$me}->{'adminpass'}){
   $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};
 };
 
-boostrap() if $ARGV[0] eq 'bootstrap';
+bootstrap() if $ARGV[0] eq 'bootstrap';
 
 my %userexist;
 my %dbexist;
