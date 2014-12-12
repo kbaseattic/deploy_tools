@@ -183,6 +183,8 @@ sub clonetag {
   $dir=~s/\/$//;
   $dir=~s/.*\///;
   if ( -e $dir ) {
+    warn getcwd();
+    warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
     mysystem("git checkout $mybranch  > /dev/null 2>&1");
@@ -190,16 +192,24 @@ sub clonetag {
     chdir("../");
   }
   else {
+    warn "trying to clone $package";
+    warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
-  }
-  if ( $mybranch ne "master" ) {
-    chdir $reponame{$package};
-    mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
+# need $dir here?
+    chdir $dir;
+    mysystem("git checkout $mybranch > /dev/null 2>&1");
     chdir "../";
   }
   if ( $mytag ne "head" ) {
-    chdir $reponame{$package};
+    chdir $package;
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
+    chdir "../";
+  }
+  if ( $mybranch ne "master" ) {
+    warn "checking out branch $mybranch";
+#    chdir $reponame{$package};
+    chdir $package;
+    mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
   # Save the stats
@@ -319,10 +329,10 @@ sub test_service {
       warn "Testing service $s\n";
       # not sure why it's not picking up DEPLOY_RUNTIME
       # need to fix this at some point, but not essential right now
-      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test >> $LOGFILE");
+      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test &> $LOGFILE ; echo 'done with tests'");
     }
     else {
-      print "No start script found in $s\n";
+      print "No dev directory found in $s\n";
     }
   }
 }
