@@ -32,6 +32,7 @@ open(T,"./nginx.tmpl") or die "Unable to open template";
 open(my $new,">  $nginxfile") or die "Unable to open nginx file";
 while(<T>){
   print $new $_;
+  print_narrative($new,0) if (/\%NARINCLUDE/);
   printserv($new,0) if (/\%INCLUDE/);
   printserv($new,1) if (/\%SSLINCLUDE/);
 }
@@ -117,6 +118,13 @@ sub docs {
   print $fh "            proxy_pass http://".$s->{host}."/".$servicedir.";\n";
   print $fh "        }\n";
 
+}
+
+sub print_narrative {
+  my $fh=shift;
+  print $fh "        location / {\n";
+  print $fh "                 proxy_pass http://".$cfg->{services}->{narrative}->{host}."/;\n";
+  print $fh "        }\n";
 }
 
 sub bootstrap {
