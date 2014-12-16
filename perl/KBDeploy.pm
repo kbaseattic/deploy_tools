@@ -266,10 +266,10 @@ sub deploy_devcontainer {
   mysystem("$basedir/config/fixup_dc");
 
   print "Running Make in dev_container\n";
-  mysystem(". ./user-env.sh;make $MAKE_OPTIONS >> $LOGFILE");
+  mysystem(". ./user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
   print "Running make deploy\n";
-  mysystem(". ./user-env.sh;make deploy $MAKE_OPTIONS >> $LOGFILE");
+  mysystem(". ./user-env.sh;make deploy $MAKE_OPTIONS >> $LOGFILE 2>&1");
   print "====\n";
 }
 
@@ -449,9 +449,7 @@ sub redeploy_service {
     print STDERR "Missing hash file $hf\n";
     return 1;
   }
-  return 1;
 
-  # Redo this logic since this will always return 0 
   while(<H>){
     chomp;
     my ($s,$url,$hash)=split;
