@@ -39,9 +39,11 @@ KBDeploy::generate_autodeploy($ad,\@override_dc);
 chdir "$KB_DC/modules";
 foreach my $svc (@sl)
 {
-  warn "cloning $svc";
   KBDeploy::clonetag($svc);
 }
+
+print "Running make\n";
+mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
 print "Running auto deploy\n";
 chdir $KB_DC;

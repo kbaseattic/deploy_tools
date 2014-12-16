@@ -14,7 +14,6 @@ my $hashfile;
 
 my @sl=myservices();
 exit unless scalar(@sl);
-warn "sl is " . join ':',@sl;
 
 my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
 $narr_host=~s/http.*\/\///;
