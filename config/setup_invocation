@@ -18,6 +18,15 @@ my $MAKE_OPTIONS=$cfg->{global}->{'make-options'};
 my $LOGFILE="/tmp/deploy.log";
 my $KB_DC=$cfg->{'global'}->{devcontainer};
 
+#
+# redploy_service will tell us if we need to repeploy but
+# it also populates that hashes to deploy
+my $redeploy=KBDeploy::redeploy_service("../$hashfile",@sl);
+if (! $redeploy){
+  print "No deploy required for $sl[0] ($redeploy)\n";
+  exit;
+}
+
 stop_service('invocation');
 
 # these are service names
