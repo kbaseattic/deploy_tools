@@ -24,7 +24,7 @@ exit if (KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
 # it also populates that hashes to deploy
 my $redeploy=KBDeploy::redeploy_service("../$hashfile",@sl);
 if (! $redeploy){
-  print "No deploy required for $sl[0] ($redeploy)\n";
+  print "No deploy required for $sl[0]\n";
   exit;
 }
 
