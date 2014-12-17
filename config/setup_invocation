@@ -41,12 +41,12 @@ foreach my $svc (@sl)
 {
   KBDeploy::clonetag($svc);
 }
+chdir $KB_DC;
 
 print "Running make\n";
 mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
 print "Running auto deploy\n";
-chdir $KB_DC;
 mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
 
 start_service('invocation');
