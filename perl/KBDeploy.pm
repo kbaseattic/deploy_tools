@@ -40,9 +40,6 @@ else {
   die "Unable to find config file\n";
 }
 
-# TODO: Make a parameter or more clever
-my $DONEFILE="/root/deploy.done";
-
 
 # repo is hash that points to the git repo.  It should work for both the
 # service name in the config file as well as the git repo name
@@ -176,14 +173,11 @@ sub clonetag {
   $mytag="head" if ! defined $mytag; 
   $mybranch="master" if ! defined $mybranch; 
   $mytag=$global->{tag} if defined $global->{tag};
-  print "$package $mytag $mybranch\n";
-
-  print "- Cloning $package\n";
+  print "  - Cloning $package (tag: $mytag branch:$mybranch)\n";
   my $dir=$repo{$package};
   $dir=~s/\/$//;
   $dir=~s/.*\///;
   if ( -e $dir ) {
-    warn getcwd();
     warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
     # Make sure we are on head
@@ -192,23 +186,20 @@ sub clonetag {
     chdir("../");
   }
   else {
-    warn "trying to clone $package";
-    warn getcwd();
     mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
 # need $dir here?
-    chdir $dir;
+    chdir $reponame{$package} or die "Unable to chdir";
     mysystem("git checkout $mybranch > /dev/null 2>&1");
     chdir "../";
   }
   if ( $mytag ne "head" ) {
-    chdir $package;
+    chdir $reponame{$package} or die "Unable to chdir";
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
   if ( $mybranch ne "master" ) {
     warn "checking out branch $mybranch";
-#    chdir $reponame{$package};
-    chdir $package;
+    chdir $reponame{$package} or die "Unable to chdir";
     mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
@@ -226,7 +217,7 @@ sub clonetag {
 sub getdeps {
   my $mserv=shift;
   my $KB_DC=$global->{devcontainer};
-  print "- Processing dependencies for $mserv\n";
+  print "  - Processing dependencies for $mserv\n";
   $mserv=$reponame{$mserv} if defined $reponame{$mserv};
 
   my $DEP="$KB_DC/modules/$mserv/DEPENDENCIES";
@@ -367,39 +358,20 @@ sub generate_autodeploy{
   $acfg->newval($section,'deploy-service',join ',',@{$dlist->{'deploy-service'}}) or die "Unable to set deploy-service";
   $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
 
-  # Workaround since auth doesn't have a deploy-client target
-#  my $dc=$bcfg->val($section,'deploy-client');
-#  $dc=~s/auth,//;
-
   # new: read directory listing and deploy those clients
   my $module_dir=$KB_DC.'/modules/';
   opendir MODULEDIR,$module_dir || die "couldn't open $module_dir: $!";
   my @dc;
-  while (my $module=readdir(MODULEDIR))
-  {
-#    warn $module;
 #   skip these names
 # should workspace be in here?  its deploy-client target doesn't work right
-    my @skip=qw(
-..
-.
-README
-auth
-kb_model_seed
-workspace_deluxe
-);
-    my %skip=map {$_=>1} @skip;
+  my @skip=('..','.','README','auth','kb_model_seed','workspace_deluxe');
+  my %skip=map {$_=>1} @skip;
+  while (my $module=readdir(MODULEDIR))
+  {
     next if $skip{$module};
 
-#    next if ($module eq '..');
-#    next if ($module eq '.');
-#    next if ($module eq 'README');
-  # keeping workaround since auth doesn't have a deploy-client target
-#    next if ($module eq 'auth');
-# this should work, eh?
-#    next unless (-d $KB_DC.'/'.$module);
+    next unless (-d $KB_DC.'/'.$module);
 
-#    warn 'accepting module ' . $module;
     push @dc,$module;
   }
   closedir MODULEDIR;
@@ -456,11 +428,12 @@ sub redeploy_service {
 
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
   if (! open(H,"$hf")){
-    print STDERR "Missing hash file $hf\n";
+    print STDERR "No hash file $hf\n";
     return 1;
   }
 
   while(<H>){
+    return 0 if /^Done$/;
     chomp;
     my ($s,$url,$hash)=split;
     return 1 if $url ne $cfg->{services}->{$s}->{giturl};
@@ -468,7 +441,8 @@ sub redeploy_service {
     return 1 if $hash ne $cfg->{services}->{$s}->{hash};
   }
  
-  return 0;
+  # Missing Done flag 
+  return 1;
 }
 
 sub auto_deploy {
@@ -597,23 +571,27 @@ sub mark_complete {
   my @services=@_;
   print 'Services deployed successfully: ' . join ', ', @services;
   print "\n";
-  open(D,"> $DONEFILE");
-  print D "Done\n";
-  close D;
+  my $hf=$global->{devcontainer}."/".$global->{hashfile};
+  open GH,">> $hf" or die "Unable to create $hf\n";
+  print GH "Done\n";
+  close GH;
 }
 
 # Use this to determine if a node is already finished
 #
 sub is_complete {
   my @services=@_;
-  if ( -e $DONEFILE ) {
-    return 1;
+  my $hf=$global->{devcontainer}."/".$global->{hashfile};
+  open(H,"$hf") or return 0;
+  while (<H>){
+    return 1 if /^Done$/;
   }
   return 0;
 }
 
 sub reset_complete {
-  unlink $DONEFILE;
+  my $hf=$global->{devcontainer}."/".$global->{hashfile};
+  rename $hf,$hf.'.old';
 }
 
 1;

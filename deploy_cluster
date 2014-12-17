@@ -45,7 +45,7 @@ switch ($command) {
      mkhashfile();
   }
   case /resetdeploy/ {
-     resetdeploy();
+     resetdeploy(@ARGV);
   }
   else {
     printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|mkhashfile|resetdeploy>\n";
@@ -197,6 +197,12 @@ sub mkhashfile {
 sub resetdeploy{
    my $list=KBDeploy::hostlist();
 
-   KBProvision::run_remote_all($list,"rm -f /root/deploy.done");
-   return 1;
+   if (@_[0] eq 'local'){
+     KBDeploy::reset_complete();
+     return;
+   }
+   elsif (@_[0] ne 'all'){
+     $list=join ",",@_;
+   }
+   KBProvision::run_remote_all($list,"cd $basedir/;./$0 resetdeploy local");
 }
