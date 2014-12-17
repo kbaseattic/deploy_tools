@@ -1,0 +1,5 @@
+$KB_TOP/services/search/stop_service
+sleep 2
+rm -rf $KB_TOP/services/search/solr/data
+# bad to be hardcoded, to fix later
+ln -sf /mnt/search/08oct2014.kkeller/data/ $KB_TOP/services/search/solr/

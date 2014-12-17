@@ -63,6 +63,6 @@ mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclie
 #
 # export AUTH='Authorization: OAuth $TOK
 #
-#curl -X POST -H "$AUTH" http://next-awe:7107/cgroup/next
+#curl -X POST -H "$AUTH" http://<awe>:7107/cgroup/next
 #
 # Grab output and stuff in config

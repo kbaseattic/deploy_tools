@@ -1,0 +1,9 @@
+#!/bin/sh
+
+B=$(grep basename cluster.ini|sed 's/.*=//')
+
+DB=$(grep dbhost cluster.ini|sed 's/.*=//'|sed 's/#.*//'|uniq)
+
+echo "127.0.0.1 localhost"
+echo ""
+(grep "$B[0-9]" /etc/hosts;for h in $DB; do grep $h /etc/hosts;done)|sed "s/${B}-www/${B}-www $B.kbase.us/"|sort -n -k1,4|uniq

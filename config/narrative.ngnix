@@ -1,0 +1,272 @@
+# You may add here your
+# server {
+#	...
+# }
+# statements for each of your virtual hosts to this file
+
+##
+# You should look at the following URL's in order to grasp a solid understanding
+# of Nginx configuration files in order to fully unleash the power of Nginx.
+# http://wiki.nginx.org/Pitfalls
+# http://wiki.nginx.org/QuickStart
+# http://wiki.nginx.org/Configuration
+#
+# Generally, you will want to move this file somewhere, and start with a clean
+# file but keep this around for reference. Or just disable in sites-enabled.
+#
+# Please see /usr/share/doc/nginx-doc/examples/ for more detailed examples.
+##
+
+#init_by_lua 'cjson = require "cjson"';
+
+lua_shared_dict proxy_map 1m;
+lua_shared_dict proxy_last 100k;
+lua_shared_dict proxy_last_ip 200k;
+lua_shared_dict proxy_state 100k;
+lua_shared_dict proxy_mgr 100k;
+lua_shared_dict proxy_token_cache 100k;
+
+lua_package_path "/kb/deployment/services/narrative/docker/?;/kb/deployment/services/narrative/docker/?.lua;;";
+
+init_by_lua '
+    json = require("json")
+    proxymgr = require("proxy_mgr")
+    proxymgr:initialize{ proxy_map = ngx.shared.proxy_map,
+                         proxy_last = ngx.shared.proxy_last,
+			 proxy_last_ip = ngx.shared.proxy_last_ip,
+			 proxy_state = ngx.shared.proxy_state,
+			 proxy_token_cache = ngx.shared.proxy_token_cache,
+			 proxy_mgr = ngx.shared.proxy_mgr }
+';
+
+server {
+	#listen   80; ## listen for ipv4; this line is default and implied
+	#listen   [::]:80 default ipv6only=on; ## listen for ipv6
+
+	root /kb/deployment;
+	index home.html home.shtml;
+
+	# Make site accessible from http://localhost/
+        server_name   narrative-dev.kbase.us;
+
+	# Setup a DNS resolver
+	resolver 8.8.8.8;
+	return       301 https://narrative-dev.kbase.us$request_uri;
+
+	location / {
+		root /kb/deployment/ui-common;
+		index index.html;
+		#ssi on;
+		ssi_silent_errors off;
+		allow all;
+
+		auth_basic	"KBase Dev Website";
+		auth_basic_user_file htpasswd;
+	}
+
+
+
+#	location ~ ^/narratives/(.*)/(.*)$ {
+#		allow all;
+#		default_type image/png;
+#		alias /kb/deployment/static/narrative.png;
+#	}
+
+
+#	location ~ ^/landing/(.*)$ {
+#		index index.html;
+#		allow all;
+#		alias /kb/deployment/landing/$1;
+#	}
+
+	location ~ ^/demo/(.*)$ {
+		allow all;
+		alias /kb/deployment/demo/$1;
+	}
+
+	# Dynamic proxy manager
+	location /proxy_map {
+	     default_type 'application/json';
+	     allow 127.0.0.1;
+
+	     set $uri_base '/proxy_map';
+	     content_by_lua 'proxymgr:set_proxy()';
+
+	}
+
+	# Statically bound workspace1 instance for Paramvir
+	location /workspace1 {
+             default_type 'text/plain';
+ 
+             proxy_set_header X-Forwarded-Host $host;
+             proxy_set_header X-Real-IP $remote_addr;
+             proxy_set_header X-Forwarded-Server $host;
+             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+             proxy_set_header Host $http_host;
+             proxy_set_header X-NginX-Proxy true;
+             proxy_pass http://127.0.0.1:49154;
+             proxy_redirect off;
+             proxy_http_version 1.1;
+             proxy_set_header Upgrade $http_upgrade;
+             proxy_set_header Connection "upgrade";
+             proxy_read_timeout 86400;
+	}
+
+        location /narrative/ {
+
+             default_type 'text/plain';
+ 
+             set $target '';
+
+             access_by_lua '
+	     		   proxymgr:use_proxy()
+	     ';
+              proxy_set_header X-Forwarded-Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-Server $host;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header Host $http_host;
+              proxy_set_header X-NginX-Proxy true;
+              proxy_pass http://$target;
+              proxy_redirect off;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_read_timeout 86400;
+        }
+
+
+	#error_page 404 /404.html;
+
+	# redirect server error pages to the static page /50x.html
+	#
+	#error_page 500 502 503 504 /50x.html;
+	#location = /50x.html {
+	#	root /usr/share/nginx/www;
+	#}
+
+	# proxy the PHP scripts to Apache listening on 127.0.0.1:80
+	#
+	#location ~ \.php$ {
+	#	proxy_pass http://127.0.0.1;
+	#}
+
+	# pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+	#
+	#location ~ \.php$ {
+	#	fastcgi_pass 127.0.0.1:9000;
+	#	fastcgi_index index.php;
+	#	include fastcgi_params;
+	#}
+
+	# deny access to .htaccess files, if Apache's document root
+	# concurs with nginx's one
+	#
+	#location ~ /\.ht {
+	#	deny all;
+	#}
+}
+
+# Proxy	for the nginx remote api
+server {
+        listen 127.0.0.1:65000;
+	ssl off;
+	#ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+	#ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+
+	#ssl_session_timeout 5m;
+
+	#ssl_protocols SSLv3 TLSv1;
+	#ssl_ciphers ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv3:+EXP;
+	#ssl_prefer_server_ciphers on;
+
+        #server_name docker_remote;
+	auth_basic_user_file /etc/nginx/htpasswd;
+        location / {
+            proxy_pass http://unix:/var/run/docker.sock:/;
+	    #auth_basic 'private';
+        }
+}
+
+# Proxy for globus online - non-blocking lua code doesn't handle https, so
+# we build an internal proxy to the Globus Nexus API endpoint
+server {
+	listen 127.0.0.1:65001;
+
+	location / {
+		proxy_pass https://nexus.api.globusonline.org/;
+		proxy_set_header	Host	nexus.api.globusonline.org;
+		proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+	}
+}
+
+# HTTPS server
+#
+server {
+       listen 443;
+       server_name narrative-dev.kbase.us;
+
+	root /kb/deployment;
+	index home.html home.shtml;
+
+	# Make site accessible from http://localhost/
+        server_name   localhost;
+
+	location / {
+		root /kb/deployment/ui-common;
+		index index.html;
+		#ssi on;
+		ssi_silent_errors off;
+		allow all;
+
+	}
+
+	# Dynamic proxy manager
+	location /proxy_map {
+	     default_type 'application/json';
+	     allow 127.0.0.1;
+
+	     set $uri_base '/proxy_map';
+	     content_by_lua 'proxymgr:set_proxy()';
+
+	}
+
+        location /narrative/ {
+
+             default_type 'text/plain';
+ 
+             set $target '';
+
+             access_by_lua '
+	     		   proxymgr:use_proxy()
+	     ';
+              proxy_set_header X-Forwarded-Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-Server $host;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header Host $http_host;
+              proxy_set_header X-NginX-Proxy true;
+              proxy_pass http://$target;
+              proxy_redirect off;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection "upgrade";
+              proxy_read_timeout 86400;
+        }
+
+       ssl on;
+# kkeller mod 01 aug 2014
+# use the chained cert made by 
+# cat server.crt gd_bundle-g1-g2.crt > server.chained.crt
+# see http://nginx.org/en/docs/http/configuring_https_servers.html#chains
+#       ssl_certificate ssl/server.crt;
+       ssl_certificate ssl/server.chained.crt;
+       ssl_certificate_key ssl/server.key;
+
+       ssl_session_timeout 5m;
+
+       ssl_protocols SSLv3 TLSv1;
+       ssl_ciphers ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv3:+EXP;
+       ssl_prefer_server_ciphers on;
+
+}
