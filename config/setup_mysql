@@ -11,7 +11,7 @@ my $cfg=read_config();
 
 my @sl=myservices();
 my $me=$sl[0];
-my $adminpass='';
+my $adminpass='--user root';
 
 if (defined $cfg->{services}->{$me}->{'adminpass'}){
   $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};

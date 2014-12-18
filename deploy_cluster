@@ -100,10 +100,10 @@ sub sync_dt {
 
    warn "syncing dt to hosts $list";
    KBProvision::run_remote_all($list,"[ -e $basedir ] || mkdir $basedir");
-   mysystem("xdcp $list $0 $basedir/$0");
-   mysystem("xdcp $list $cfgfile $basedir/$cfgfile");
-   mysystem("xdcp $list -R perl $basedir/");
-   mysystem("xdcp $list -R config $basedir/");
+   mysystem("pdcp -w $list $0 $basedir/$0");
+   mysystem("pdcp -w $list $cfgfile $basedir/$cfgfile");
+   mysystem("pdcp -w $list -r perl $basedir/");
+   mysystem("pdcp -w $list -r config $basedir/");
 }
 
 #

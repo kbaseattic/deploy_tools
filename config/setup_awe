@@ -53,7 +53,7 @@ sub fix_config {
   $mcfg->newval('Mongodb','password',$acfg->{'mongodb-pwd'});
 
 #Update Ports
-  $mcfg->setval('Ports','api-port',$acfg->{'port'});
+  $mcfg->setval('Ports','api-port',$acfg->{'service-port'});
   $mcfg->setval('Admin','email','scanon@lbl.gov');
 # Reuse mongo password
   $mcfg->setval('Admin','secretkey',$acfg->{'mongodb-pwd'});

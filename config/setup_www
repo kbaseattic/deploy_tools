@@ -37,10 +37,10 @@ while(<T>){
   printserv($new,1) if (/\%SSLINCLUDE/);
 }
 close N;
-print `service nginx configtest`;
+print `sudo /etc/init.d/nginx configtest`;
 my $status=$?;
 # TODO: if configtest fails then revert
-print `service nginx restart`;
+print `sudo /etc/init.d/nginx restart`;
 
 sub printserv{
   my $new=shift;
