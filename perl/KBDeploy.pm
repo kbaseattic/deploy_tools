@@ -363,14 +363,13 @@ sub generate_autodeploy{
   opendir MODULEDIR,$module_dir || die "couldn't open $module_dir: $!";
   my @dc;
 #   skip these names
-# should workspace be in here?  its deploy-client target doesn't work right
-  my @skip=('..','.','README','auth','kb_model_seed','workspace_deluxe');
+  my @skip=('..','.','README','auth','kb_model_seed');
   my %skip=map {$_=>1} @skip;
   while (my $module=readdir(MODULEDIR))
   {
     next if $skip{$module};
 
-    next unless (-d $KB_DC.'/'.$module);
+    next unless (-d $module_dir.'/'.$module);
 
     push @dc,$module;
   }
