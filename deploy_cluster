@@ -195,13 +195,13 @@ sub mkhashfile {
 #
 # TODO: Make this cleaner
 sub resetdeploy{
-   my $list=KBDeploy::hostlist();
+   my $list=join ',',KBDeploy::hostlist();
 
    if (@_[0] eq 'local'){
      KBDeploy::reset_complete();
      return;
    }
-   elsif (@_[0] ne 'all'){
+   elsif (defined @_[0] && @_[0] ne 'all'){
      $list=join ",",@_;
    }
    KBProvision::run_remote_all($list,"cd $basedir/;./$0 resetdeploy local");

@@ -1,0 +1,45 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use strict;
+
+my $service="aweclient";
+
+my $cfg=read_config();
+# We should know what service to run.  This is
+# just a safety measure in case it gets run on the wrong host.
+my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
+my $KB_DC=$cfg->{'global'}->{devcontainer};
+
+
+my @sl=myservices();
+my $service=$sl[0];
+
+print "Service: $service\n";
+
+# Fix up config
+my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
+my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+
+$mcfg->newval('Client','group',$cfg->{services}->{$service}->{'group'}) or die "Unable to set group";
+$mcfg->newval('Client','clientgroup_token',$cfg->{services}->{$service}->{'token'}) or die "Unable to set token";
+$mcfg->newval('Client','serverurl',$cfg->{services}->{$service}->{'serverurl'}) or die "Unable to set serverurl";
+$mcfg->setval('Client','supported_apps','*');
+
+print "Updating $file\n";
+$mcfg->WriteConfig($file) or die "Unable to write $file";
+
+mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
+mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
+#mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclient");
+
+
+# TODO
+#
+# export AUTH='Authorization: OAuth $TOK
+#
+#curl -X POST -H "$AUTH" http://<awe>:7107/cgroup/next
+#
+# Grab output and stuff in config

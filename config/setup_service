@@ -38,6 +38,6 @@ KBDeploy::postprocess(@sl);
 start_service(@sl);
 
 # really only want to test this service, but i think this should be ok too
-KBDeploy::test_service(@sl);
+#KBDeploy::test_service(@sl);
 
 KBDeploy::mark_complete(@sl);

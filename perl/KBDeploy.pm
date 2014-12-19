@@ -396,6 +396,12 @@ sub prepare_service {
     print "Deploying $mserv\n";
     # Clone or update the module
     clonetag $mserv;
+    if (defined $cfg->{services}->{$mserv}->{deploy}){
+      foreach my $s (split /,/,$cfg->{services}->{$mserv}->{deploy}){
+        clonetag $s;
+        getdeps $s;
+      }
+    }
     # Now get any dependencies
     getdeps $mserv;
   }
