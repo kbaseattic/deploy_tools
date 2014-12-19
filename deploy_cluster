@@ -41,6 +41,9 @@ switch ($command) {
   case /start/ {
     start(@ARGV);
   }
+  case /test/ {
+    run_test(@ARGV);
+  }
   case /mkhashfile$/ {
      mkhashfile();
   }
@@ -139,6 +142,27 @@ sub deploy_services{
    }
 }
 
+#
+# Test service
+#
+sub run_test{
+   my $list=KBDeploy::hostlist();
+
+   if ($_[0] eq 'local'){
+     # Run test
+     my @sl=myservices();
+     KBDeploy::test_service(@sl);
+     return;
+   }
+   elsif ($_[0] ne 'all'){
+     $list=join ',',@_;
+   }
+   for my $host (split /,/,$list){
+     KBProvision::run_remote($host,"cd $basedir/;./$0 test local");
+   }
+}
+
+#
 #
 # See if things are running
 # TODO: Make this better
