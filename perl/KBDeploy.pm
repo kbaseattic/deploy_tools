@@ -320,7 +320,8 @@ sub test_service {
       warn "Testing service $s\n";
       # not sure why it's not picking up DEPLOY_RUNTIME
       # need to fix this at some point, but not essential right now
-      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test &> $LOGFILE ; echo 'done with tests'");
+      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test ; echo 'done with tests'");
+#      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test &> $LOGFILE ; echo 'done with tests'");
     }
     else {
       print "No dev directory found in $s\n";
