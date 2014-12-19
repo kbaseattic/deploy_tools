@@ -36,8 +36,8 @@ sub fix_config {
 # Update Mongo Params
   $mcfg->setval('Mongodb','hosts',$acfg->{'mongodb-host'});
   $mcfg->newval('Mongodb','database',$acfg->{'mongodb-database'});
-  $mcfg->newval('Mongodb','user',$acfg->{'mongodb-user'});
-  $mcfg->newval('Mongodb','password',$acfg->{'mongodb-pwd'});
+  $mcfg->setval('Mongodb','user',$acfg->{'mongodb-user'});
+  $mcfg->setval('Mongodb','password',$acfg->{'mongodb-pwd'});
 
 #Update Ports
   $mcfg->setval('Ports','site-port',$acfg->{'site-port'});

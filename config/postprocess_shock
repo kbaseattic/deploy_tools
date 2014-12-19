@@ -9,23 +9,11 @@ my $cfg=read_config();
 # We should know what service to run.  This is
 # just a safety measure in case it gets run on the wrong host.
 my @sl=myservices();
-exit unless scalar(@sl);
-
-my $hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
-exit if $ARGV[0] eq 'bootstrap';
-
-exit if -e '/kb/deployment' && $ARGV[0] ne '-f';
-
-stop_service('shock');
-
-deploy_service('deploy','shock');
-
-my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 
 # Fix up config
-
+my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
-$mcfg->setval('Address','api-port',$cfg->{services}->{shock}->{'port'});
+$mcfg->newval('Address','api-port',$cfg->{services}->{shock}->{'service-port'});
 
 $mcfg->setval('Mongodb','hosts',$cfg->{services}->{shock}->{'mongodb-host'});
 $mcfg->newval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
@@ -40,4 +28,3 @@ $mcfg->setval('Runtime','GOMAXPROCS',$cfg->{services}->{shock}->{'gomaxprocs'});
 
 $mcfg->WriteConfig($file);
 
-start_service('shock');
