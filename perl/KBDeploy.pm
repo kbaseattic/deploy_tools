@@ -313,9 +313,11 @@ sub test_service {
   my $KB_DC=$global->{devcontainer};
   for my $s (@_)  {
     if ($cfg->{services}->{$s}->{'skip-test'} == 1) {
-        warn "skipping service tests for $s";
+        warn "skipping tests for $s";
         return;
     }
+    warn "running tests for $s";
+
     my $spath=$s;
 # need the git checkout dir name here
     my $giturl=$cfg->{services}->{$s}->{giturl} if (defined $cfg->{services}->{$s}->{giturl});
