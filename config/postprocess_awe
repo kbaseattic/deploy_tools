@@ -14,27 +14,14 @@ exit if $ARGV[0] eq 'bootstrap';
 
 my $cfg=read_config();
 
-# We should know what service to run.  This is
-# just a safety measure in case it gets run on the wrong host.
-my @sl=myservices();
-exit unless scalar(@sl);
-
 my $acfg=$cfg->{services}->{awe};
 
-if ($ARGV[0] eq '-f' || ! -e '/kb/deployment'){
-  stop_service('awe');
+symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
 
-  deploy_service('deploy','awe');
+my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
+fix_config($file,$acfg);
 
-  symlink "/mnt/awe/site","/var/www/awe_service" unless -e "/var/www/awe_service";
-
-  my $file=$cfg->{'global'}->{deploydir}."/services/awe_service/conf/awe.cfg";
-  fix_config($file,$acfg);
-
-  fix_configjs("/mnt/awe/site/js/config.js");
-
-  start_service('awe');
-}
+fix_configjs("/mnt/awe/site/js/config.js");
 
 # TODO: Create client groups
 
@@ -53,10 +40,12 @@ sub fix_config {
   $mcfg->newval('Mongodb','password',$acfg->{'mongodb-pwd'});
 
 #Update Ports
+  $mcfg->setval('Ports','site-port',$acfg->{'site-port'});
   $mcfg->setval('Ports','api-port',$acfg->{'service-port'});
   $mcfg->setval('Admin','email','scanon@lbl.gov');
 # Reuse mongo password
   $mcfg->setval('Admin','secretkey',$acfg->{'mongodb-pwd'});
+  $mcfg->setval('Admin','users',$acfg->{'admin-user'});
 
 # Update urls
   $mcfg->setval('External','site-url',$acfg->{'site-url'});
