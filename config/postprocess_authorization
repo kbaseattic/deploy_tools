@@ -1,7 +1,14 @@
+#!/bin/sh
+
+cd $(readlink -f $(dirname $0))
+KB_TOP=$(grep deploydir= ../cluster.ini|sed 's/.*=//'|head -1)
+
+echo $KB_TOP
+
 $KB_TOP/services/authorization_server/stop_service
 sleep 5
 
 CON=$(grep mongodb-host cluster.ini|grep auth|sed 's/.*=//')
 
 
-echo MONGODB_CONN="['$CON']" > $KB_TOP/services/authorization_server/local_settings.py
+echo MONGODB_CONN="['$CON']" > $KB_TOP/services/authorization_server/authorization_server/authorization_server/local_settings.py

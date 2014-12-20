@@ -18,7 +18,7 @@ my @sl=myservices();
 exit unless scalar(@sl);
 
 mkdocs(@sl);
-exit if (KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
+exit if (! defined $hashfile && KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
 #
 # redploy_service will tell us if we need to repeploy but
 # it also populates that hashes to deploy

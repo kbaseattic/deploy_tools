@@ -1,9 +1,11 @@
 #!/bin/sh
 
-SDIR=/root/dt/${1}
+SDIR=/tmp/dtx/${1}
+
+DT=$(grep dtdir= cluster.ini|sed 's/.*=//'|head -1)
 
 mkdir $SDIR
-rsync -avz ${1}:dt $SDIR/
+rsync -avz ${1}:$DT $SDIR/
 diff -ru ./config $SDIR/dt/config
 diff -ru ./perl $SDIR/dt/perl
 diff -ru ./cluster.ini $SDIR/dt/cluster.ini
