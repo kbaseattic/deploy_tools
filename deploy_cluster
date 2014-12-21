@@ -41,6 +41,9 @@ switch ($command) {
   case /start/ {
     start(@ARGV);
   }
+  case /stop/ {
+    stop(@ARGV);
+  }
   case /test/ {
     run_test(@ARGV);
   }
@@ -51,7 +54,7 @@ switch ($command) {
      resetdeploy(@ARGV);
   }
   else {
-    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|mkhashfile|resetdeploy>\n";
+    printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|stop [all]|test [all]|mkhashfile|resetdeploy>\n";
     exit 1;
   }
 }
@@ -187,6 +190,24 @@ sub start{
      my @sl=myservices();
 
      KBDeploy::start_service(@sl);
+   }
+}
+
+# Run stop_service
+sub stop{
+   my $param=shift;
+
+   if ($param eq 'all'){
+     sync_dt();
+     my $list=KBDeploy::hostlist();
+
+     KBProvision::run_remote_all($list,"cd $basedir/;./$0 stop");
+   }
+   else{
+     # This is run on the service node
+     my @sl=myservices();
+
+     KBDeploy::stop_service(@sl);
    }
 }
 
