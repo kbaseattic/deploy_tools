@@ -312,7 +312,7 @@ sub test_service {
   my $LOGFILE="/tmp/test.log";
   my $KB_DC=$global->{devcontainer};
   for my $s (@_)  {
-    if ($cfg->{services}->{$s}->{'skip-test'} == 1) {
+    if (defined $cfg->{services}->{$s}->{'skip-test'} && $cfg->{services}->{$s}->{'skip-test'} == 1) {
         warn "skipping tests for $s";
         return;
     }
@@ -326,8 +326,9 @@ sub test_service {
       warn "Testing service $s\n";
       # not sure why it's not picking up DEPLOY_RUNTIME
       # need to fix this at some point, but not essential right now
-      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test ; echo 'done with tests'");
-#      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make test &> $LOGFILE ; echo 'done with tests'");
+      my $TEST_ARGS=$cfg->{services}->{$s}->{'test-args'};
+      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make $TEST_ARGS ; echo 'done with tests'");
+#      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make $TEST_ARGS &> $LOGFILE ; echo 'done with tests'");
     }
     else {
       print "No dev directory found in $s\n";
@@ -360,7 +361,11 @@ sub generate_autodeploy{
   for my $s (myservices()){
     my $dt=$cfg->{services}->{$s}->{'auto-deploy-target'};
     push @{$dlist->{$dt}},$reponame{$s}; 
+    if (defined $cfg->{services}->{$s}->{'deploy-service'}){
+       push @{$dlist->{'deploy-service'}},split /,/,$cfg->{services}->{$s}->{'deploy-service'};
+    }
   }
+  
   $acfg->newval($section,'deploy-master',join ',',@{$dlist->{deploy}}) or die "Unable to set deploy-service";
   $acfg->newval($section,'deploy-service',join ',',@{$dlist->{'deploy-service'}}) or die "Unable to set deploy-service";
   $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
