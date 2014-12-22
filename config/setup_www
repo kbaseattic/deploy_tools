@@ -6,6 +6,8 @@ use strict;
 
 # Parameters
 my $debug=0;
+my $nginxTopConfigDest="/etc/nginx/nginx.conf";
+my $nginxTopConfigSrc=$FindBin::Bin."/nginx.conf";
 my $nginxfile="/etc/nginx/sites-enabled/default";
 my $ngintemp=$FindBin::Bin."/nginx.tmpl";
 
@@ -25,9 +27,11 @@ mkdir "/kb/docs/services/docs" if ( ! -e "/kb/docs/services/docs");
 # Make a backup
 my $date=`date +%Y%m%d%H%M`;
 chomp $date;
-mysystem("/bin/cp $nginxfile /tmp/nginx.$date");
+mysystem("/bin/cp $nginxfile /tmp/nginx.default.$date");
+mysystem("/bin/cp $nginxTopConfigDest /tmp/nginx.conf.$date");
 
 # generate new config
+mysystem("/bin/cp $nginxTopConfigSrc $nginxTopConfigDest");
 open(T,"./nginx.tmpl") or die "Unable to open template";
 open(my $new,">  $nginxfile") or die "Unable to open nginx file";
 while(<T>){
