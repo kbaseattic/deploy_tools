@@ -13,8 +13,13 @@ cd $(readlink -f $(dirname $0))
 echo "Check status of services: https://monitor.kbase.us/check_mk/view.py?view_name=host&site=berkeley&host=$label-www" > /tmp/deploy.report.$label.mail
 echo >> /tmp/deploy.report.$label.mail
 grep 'Services deployed successfully' /tmp/deploy.report.$label >> /tmp/deploy.report.$label.mail
-# UUOC
+
+# not sure of best way to report results
+# for CI should probably stay in Jenkins
+
+# old reports that are not being used
+#cat /tmp/deploy.report.$label.mail | mail -r 'nightly-build@kbase.us' -s "$label.kbase.us Nightly Build Report" nightly-build@lists.kbase.us
 #cat /tmp/deploy.report.$label.mail | mail -r 'nightly-build@kbase.us' -s "$label.kbase.us Nightly Build Report" kkeller@lbl.gov scanon@lbl.gov dolson@mcs.anl.gov nightly-build@lists.kbase.us
-cat /tmp/deploy.report.$label.mail | mail -r 'nightly-build@kbase.us' -s "$label.kbase.us Nightly Build Report" kkeller@lbl.gov
+#cat /tmp/deploy.report.$label.mail | mail -r 'nightly-build@kbase.us' -s "$label.kbase.us Nightly Build Report" kkeller@lbl.gov
 # just in case -r doesn't work in cron job
 #cat /tmp/deploy.report.mail | mail -s 'next.kbase.us Nightly Build Report' kkeller@lbl.gov 
