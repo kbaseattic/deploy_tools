@@ -1,0 +1,4 @@
+Helper scripts to populate workspace.  Currently scripts need
+a source and destination workspace; in the future, we will 
+store example objects here so that no source workspace is
+needed.
