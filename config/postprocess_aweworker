@@ -25,15 +25,28 @@ my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Co
 
 $mcfg->newval('Client','group',$cfg->{services}->{$service}->{'group'}) or die "Unable to set group";
 $mcfg->newval('Client','clientgroup_token',$cfg->{services}->{$service}->{'token'}) or die "Unable to set token";
+$mcfg->newval('Client','clientgroup_token',"replace");
 $mcfg->newval('Client','serverurl',$cfg->{services}->{$service}->{'serverurl'}) or die "Unable to set serverurl";
 $mcfg->setval('Client','supported_apps','*');
 
-print "Updating $file\n";
-$mcfg->WriteConfig($file) or die "Unable to write $file";
+my $defaultdone=0;
+foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
+  my @l=split /[=|]/,$token;
+  my $group=$l[1];
+  $mcfg->setval('Client','group',$group);
+  $mcfg->setval('Client','clientgroup_token',$token);
+  my $out=$file;
+  if ($defaultdone == 1){
+    $out=~s/cfg$//;
+    $out.="$group.cfg";
+    $defaultdone=1;
+  }
+  print "Updating $out\n";
+  $mcfg->WriteConfig($out) or die "Unable to write $file";
+}
 
 mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
 mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
-#mysystem(". $KB_DEPLOY/user-env.sh;$KB_DEPLOY/services/awe_service/start_aweclient");
 
 
 # TODO
