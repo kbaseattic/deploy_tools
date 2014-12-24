@@ -197,7 +197,7 @@ sub clonetag {
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
-  if ( $mybranch ne "master" ) {
+  elsif ( $mybranch ne "master" ) {
     warn "checking out branch $mybranch";
     chdir $reponame{$package} or die "Unable to chdir";
     mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
@@ -375,7 +375,10 @@ sub generate_autodeploy{
   opendir MODULEDIR,$module_dir || die "couldn't open $module_dir: $!";
   my @dc;
 #   skip these names
-  my @skip=('..','.','README','auth','kb_model_seed');
+  my @skip=('..','.');
+  if (defined $cfg->{global}->{'skip-deploy-client'}){
+    push @skip,split /,/,$cfg->{global}->{'skip-deploy-client'};
+  }
   my %skip=map {$_=>1} @skip;
   while (my $module=readdir(MODULEDIR))
   {
