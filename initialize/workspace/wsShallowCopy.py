@@ -47,7 +47,7 @@ def shallow_copy(sourcews,sourceWsName,targetws,targetWsName):
     for item in objects_list:
         print item
         object=sourcews.get_objects([ { "workspace":sourceWsName,"objid":item[0] } ])
-        pp.pprint (object[0]['data'])
+#        pp.pprint (object[0]['data'])
         try:
             targetws.save_objects( { "workspace":targetWsName, "objects": [ {"type":item[2], "name": item[1], "data": object[0]['data'] } ] } )
         except biokbase.workspace.client.ServerError, e:
