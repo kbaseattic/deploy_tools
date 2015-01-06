@@ -7,11 +7,14 @@ use strict;
 
 # This is the name for now, as this is what the Lua provisioner looks for to fire up a Narrative.
 my $NAR_NAME="kbase/narrative";
-my $DC="/kb/dev_container";
 
 my $cfg=read_config();
-my $hashfile;
 
+my $DC=$cfg->{'global'}->{devcontainer};
+my $DEPLOY=$cfg->{'global'}->{deploydir};
+my $nar=$DC."/modules/narrative";
+
+my $UI=$DC."/modules/ui-common";
 my @sl=myservices();
 exit unless scalar(@sl);
 
@@ -19,61 +22,56 @@ my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
 $narr_host=~s/http.*\/\///;
 # base URL for references to other services
 my $base_url=$cfg->{global}->{'basename'}. '.kbase.us';
+my $awe=$cfg->{services}->{narrative}->{'awe-url'};
+my $njs=$cfg->{services}->{narrative}->{'njs-url'};
+my $njsw=$cfg->{services}->{narrative}->{'njsw-url'};
+my $njp=$cfg->{services}->{narrative}->{'njp-url'};
 
-$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
-exit if $ARGV[0] eq 'bootstrap';
-
-
-mkdir "/kb" unless -e "/kb";
-mkdir "$DC" unless -e "$DC";
-chdir "$DC";
-
-if ($ARGV[0] eq 'bootstrap' ){
-  KBDeploy::clonetag('bootstrap');
-  bootstrap();
-  exit;
-}
-
-exit if (KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
-
-mkdir "/kb/deployment" unless -e "/kb/deployment";
-KBDeploy::clonetag('bootstrap') unless -e "$DC/bootstrap";
-KBDeploy::clonetag('narrative') unless -e "$DC/narrative";
-KBDeploy::clonetag('ui-common') unless -e "$DC/ui-common";
-
-# Move this to bootstrap section?
-mysystem("yes|/bin/sh narrative/docker/lua-dependencies.txt") unless -e "/usr/local/lib/lua";
-
-
-chdir "$DC/ui-common";
+chdir "$UI";
 print "Deploying ui-common\n";
 mysystem("./deployFunctionalSite.sh > /dev/null");
 
 # Copy lua files
-mysystem("cp $DC/narrative/docker/*.lua /kb/deployment/services/narrative/docker/");
+if ( ! -e "$DEPLOY/services/narrative" ){
+  mkdir "$DEPLOY/services/narrative" or die "Unable to create directory";
+}
+if ( ! -e "$DEPLOY/services/narrative/docker" ){
+  mkdir "$DEPLOY/services/narrative/docker" or die "Unable to create directory";
+}
+mysystem("cp -r $nar/docker/*.lua $nar/docker/resty/ $DEPLOY/services/narrative/docker/");
 
 # TODO:  abstract out this recursive grep and sed into a perl function
 #
 # Replace kbase.us/serices with new url
 print "Replacing kbase in ui-common\n";
-mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" ');
+mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "skip"');
 
 # Samething for www.kbase.us
-mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/' . $base_url . '\/services/g" ');
+mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "skip"');
 
 # Now for the search url
 # this should already be fixed
 
 # Now for the narrative url
 print "Replacing narrative in ui-common\n";
-mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'"');
+mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "skip"');
 
 # Build docker
-chdir "$DC/narrative" or die "Unable to change dir";
+chdir "$DC/modules/narrative" or die "Unable to change dir";
 print "Replacing kbase in narrative $DC/narrative\n";
-mysystem('grep -rl //kbase.us/services '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "Done" ');
+mysystem('grep -rl //kbase.us/services '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "Done" ');
 
-mysystem('grep -rl narrative.kbase.us '.$DC.'/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
+mysystem('grep -rl narrative.kbase.us '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
+
+# Fix up config.json
+my $cj=$DC."/modules/narrative/src/config.json";
+$awe=~s/\//\\\//g;
+mysystem('sed -i "s/\"awe\":.*/\"awe\": \"'.$awe.'\",/" '.$cj);
+$njp=~s/\//\\\//g;
+mysystem('sed -i "s/\"narrative_job_proxy\":.*/\"narrative_job_proxy\": \"'.$njp.'\",/" '.$cj);
+$njsw=~s/\//\\\//g;
+mysystem('sed -i "s/\"job_service\":.*/\"job_service\": \"'.$njsw.'\",/" '.$cj);
+
 # Now for the narrative url
 print "Running buildNarrativeContainer\n";
 mysystem("sh ./buildNarrativeContainer.sh");
