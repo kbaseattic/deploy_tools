@@ -93,6 +93,15 @@ server {
 	     content_by_lua 'proxymgr:set_proxy()';
 
 	}
+        # Shutdown utility
+	location /narrative_shutdown {
+	     default_type 'application/json';
+	     allow 127.0.0.1;
+
+	     set $uri_base '/proxy_map';
+	     content_by_lua 'proxymgr:narrative_shutdown()';
+
+	}
 
 	# Statically bound workspace1 instance for Paramvir
 	location /workspace1 {
