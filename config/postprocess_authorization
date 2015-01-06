@@ -8,7 +8,7 @@ echo $KB_TOP
 $KB_TOP/services/authorization_server/stop_service
 sleep 5
 
-CON=$(grep mongodb-host cluster.ini|grep auth|sed 's/.*=//')
+CON=$(grep mongodb-host ../cluster.ini|grep auth|sed 's/.*=//')
 
 
 echo MONGODB_CONN="['$CON']" > $KB_TOP/services/authorization_server/authorization_server/authorization_server/local_settings.py
