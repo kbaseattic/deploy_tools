@@ -5,6 +5,7 @@ use warnings;
 use Config::IniFiles;
 use Data::Dumper;
 use FindBin;
+use POSIX qw(strftime);
 use Cwd;
 
 use Carp;
@@ -167,16 +168,17 @@ sub mysystem {
 # Helper function to clone a module and checkout a tag.
 sub clonetag {
   my $package=shift;
-  my $mytag=$cfg->{services}->{$reponame2service{$package}}->{hash};
-  my $mybranch=$cfg->{services}->{$reponame2service{$package}}->{'git-branch'};
+  # get the service name (which may be different than the package name
+  my $serv=$reponame2service{$package};
+  my $repo=$repo{$package};
+  my $mytag=$cfg->{services}->{$serv}->{hash};
+  my $mybranch=$cfg->{services}->{$serv}->{'git-branch'};
 
   $mytag="head" if ! defined $mytag; 
   $mybranch="master" if ! defined $mybranch; 
   $mytag=$global->{tag} if defined $global->{tag};
   print "  - Cloning $package (tag: $mytag branch:$mybranch)\n";
-  my $dir=$repo{$package};
-  $dir=~s/\/$//;
-  $dir=~s/.*\///;
+  my $dir=$reponame{$package};
   if ( -e $dir ) {
     warn "$dir already exists";
     chdir $dir or die "Unable to cd to $dir";
@@ -186,20 +188,20 @@ sub clonetag {
     chdir("../");
   }
   else {
-    mysystem("git clone --recursive $repo{$package} > /dev/null 2>&1");
+    mysystem("git clone --recursive $repo > /dev/null 2>&1");
 # need $dir here?
-    chdir $reponame{$package} or die "Unable to chdir";
+    chdir $dir or die "Unable to chdir";
     mysystem("git checkout $mybranch > /dev/null 2>&1");
     chdir "../";
   }
   if ( $mytag ne "head" ) {
-    chdir $reponame{$package} or die "Unable to chdir";
+    chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
   elsif ( $mybranch ne "master" ) {
     warn "checking out branch $mybranch";
-    chdir $reponame{$package} or die "Unable to chdir";
+    chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
   }
@@ -208,7 +210,7 @@ sub clonetag {
   chomp $hash;
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
   open GH,">> $hf" or die "Unable to create $hf\n";
-  print GH "$reponame2service{$package} $repo{$package} $hash\n";
+  print GH "$serv $repo $hash\n";
   close GH;
 }
 
@@ -422,10 +424,36 @@ sub prepare_service {
   }
 }
 
+#
+# Genereate tag file
+#
+sub mkhashfile {
+  my $tagfile=shift;
+  my $ds=strftime "%Y%m%d%H%M", localtime;
+  if (! defined $tagfile){
+    $tagfile="tagfile.$ds";
+  }
+  my $out;
+  for my $service (keys %{$cfg->{services}}){
+    my $s=$cfg->{services}->{$service};
+    next if $s->{giturl} eq 'none';
+    my $tag=KBDeploy::gittag($service);
+    print STDERR "Problem with $service\n" unless length($tag)>0;
+
+    $out.="$service $s->{giturl} $tag\n";
+  }
+  open TF,"> $tagfile" or die "Unable to create $tagfile\n";
+  print "Tagfile: $tagfile\n";
+  print TF "# $ds\n";
+  print TF $out;
+  close TF;
+}
+
 sub readhashes {
   my $f=shift;
   open(H,$f);
   while(<H>){
+    next if /^#/;
     chomp;
     my ($s,$url,$hash)=split;
     $cfg->{services}->{$s}->{hash}=$hash;
@@ -566,7 +594,7 @@ sub gittag {
   my $service=shift;
   
   my $repo=$repo{$service};
-  my $mybranch=$cfg->{services}->{$repo};
+  my $mybranch=$cfg->{services}->{$service}->{'git-branch'};
 
   $mybranch="master" if ! defined $mybranch; 
   my $tag=`git ls-remote $repo heads/$mybranch`;

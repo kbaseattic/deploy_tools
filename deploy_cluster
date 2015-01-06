@@ -48,7 +48,7 @@ switch ($command) {
     run_test(@ARGV);
   }
   case /mkhashfile$/ {
-     mkhashfile();
+     KBDeploy::mkhashfile($ARGV[0]);
   }
   case /resetdeploy/ {
      resetdeploy(@ARGV);
@@ -209,31 +209,6 @@ sub stop{
 
      KBDeploy::stop_service(@sl);
    }
-}
-
-#
-# Genereate tag
-#
-sub mkhashfile {
-  my $tagfile=shift;
-  if (! defined $tagfile){ 
-    my $ds=`date +%Y%m%d%H%M`;
-    chomp $ds;
-    $tagfile="tagfile.$ds";
-  }
-  my $out;
-  for my $service (keys %{$cfg->{services}}){
-    my $s=$cfg->{services}->{$service}; 
-    next if $s->{giturl} eq 'none';
-    my $tag=KBDeploy::gittag($service);
-    print STDERR "Problem with $service\n" unless length($tag)>0;
-    
-    $out.="$service $s->{giturl} $tag\n";
-  }
-  open TF,"> $tagfile" or die "Unable to create $tagfile\n";
-  print "$tagfile\n";
-  print TF $out;
-  close TF;
 }
 
 # Removes done file
