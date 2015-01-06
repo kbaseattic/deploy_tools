@@ -1,0 +1,118 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use strict;
+
+# This is the name for now, as this is what the Lua provisioner looks for to fire up a Narrative.
+my $NAR_NAME="kbase/narrative";
+
+my $cfg=read_config();
+
+my $DC=$cfg->{'global'}->{devcontainer};
+my $DEPLOY=$cfg->{'global'}->{deploydir};
+my $nar=$DC."/modules/narrative";
+
+my $UI=$DC."/modules/ui-common";
+my @sl=myservices();
+exit unless scalar(@sl);
+
+my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
+$narr_host=~s/http.*\/\///;
+# base URL for references to other services
+my $base_url=$cfg->{global}->{'basename'}. '.kbase.us';
+my $awe=$cfg->{services}->{narrative}->{'awe-url'};
+my $njs=$cfg->{services}->{narrative}->{'njs-url'};
+my $njsw=$cfg->{services}->{narrative}->{'njsw-url'};
+my $njp=$cfg->{services}->{narrative}->{'njp-url'};
+
+chdir "$UI";
+print "Deploying ui-common\n";
+mysystem("./deployFunctionalSite.sh > /dev/null");
+
+# Copy lua files
+if ( ! -e "$DEPLOY/services/narrative" ){
+  mkdir "$DEPLOY/services/narrative" or die "Unable to create directory";
+}
+if ( ! -e "$DEPLOY/services/narrative/docker" ){
+  mkdir "$DEPLOY/services/narrative/docker" or die "Unable to create directory";
+}
+mysystem("cp -r $nar/docker/*.lua $nar/docker/resty/ $DEPLOY/services/narrative/docker/");
+
+# TODO:  abstract out this recursive grep and sed into a perl function
+#
+# Replace kbase.us/serices with new url
+print "Replacing kbase in ui-common\n";
+mysystem('grep -rl //kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "skip"');
+
+# Samething for www.kbase.us
+mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/\/\/www.kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "skip"');
+
+# Now for the search url
+# this should already be fixed
+
+# Now for the narrative url
+print "Replacing narrative in ui-common\n";
+mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "skip"');
+
+# Build docker
+chdir "$DC/modules/narrative" or die "Unable to change dir";
+print "Replacing kbase in narrative $DC/narrative\n";
+mysystem('grep -rl //kbase.us/services '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "Done" ');
+
+mysystem('grep -rl narrative.kbase.us '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
+
+# Fix up config.json
+my $cj=$DC."/modules/narrative/src/config.json";
+$awe=~s/\//\\\//g;
+mysystem('sed -i "s/\"awe\":.*/\"awe\": \"'.$awe.'\",/" '.$cj);
+$njp=~s/\//\\\//g;
+mysystem('sed -i "s/\"narrative_job_proxy\":.*/\"narrative_job_proxy\": \"'.$njp.'\",/" '.$cj);
+$njsw=~s/\//\\\//g;
+mysystem('sed -i "s/\"job_service\":.*/\"job_service\": \"'.$njsw.'\",/" '.$cj);
+
+# Now for the narrative url
+print "Running buildNarrativeContainer\n";
+mysystem("sh ./buildNarrativeContainer.sh");
+
+KBDeploy::mark_complete('narrative',@sl);
+
+sub bootstrap {
+  if ( ! -e "/usr/bin/pip") {
+    mysystem("apt-get update");
+    mysystem("apt-get -y install python-pip");
+  }
+
+  chdir "/kb" or die "Unable to chdir";
+  KBDeploy::clonetag('bootstrap') unless -e "/kb/bootstrap";
+
+  mysystem("apt-get install -y libcurl4-gnutls-dev") unless -e "/usr/bin/curl-config";
+  mysystem("apt-get install -y python-dev ncurses-dev") unless -e "/usr/include/ncurses.h";
+  #mysystem("pip install -r bootstrap/kb_python_runtime/python-pip-list-narrative");
+
+
+  mysystem("apt-get install -y python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose") unless -e "/usr/bin/ipython";
+
+
+  mysystem("apt-get -y install python-software-properties") unless -e "/usr/bin/add-apt-repository";
+  if ( ! -e "/usr/sbin/nginx" ){
+    mysystem("echo ''|add-apt-repository ppa:nginx/stable");
+    mysystem("apt-get update ; apt-get install -y nginx");
+  }
+
+  if ( ! -e "/usr/bin/lua5.1" ){
+    mysystem("apt-get install lua5.1");
+    mysystem("apt-get install luarocks");
+    mysystem("apt-get install liblua5.1-0");
+    mysystem("apt-get install liblua5.1-0-dev");
+    mysystem("apt-get install liblua5.1-json");
+    mysystem("apt-get install liblua5.1-lpeg2");
+    mysystem("luarocks install luasocket");
+    mysystem("luarocks install luajson");
+    mysystem("luarocks install penlight");
+    mysystem("luarocks install lua-spore");
+    mysystem("luarocks install luacrypto");
+  }
+
+}
