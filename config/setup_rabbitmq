@@ -2,7 +2,7 @@
 
 # need to detect the bootstrap switch here
 
-if $1 eq 'bootstrap'
+if [[ $1 == 'bootstrap' ]]
 then
   apt-get update
   apt-get -y install rabbitmq-server
