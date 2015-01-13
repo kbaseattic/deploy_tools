@@ -1,0 +1,8 @@
+#!/bin/bash
+
+apt-get update
+apt-get -y install rabbitmq-server
+cp ./rabbitmq-config /etc/rabbitmq/
+# would like a better way to find rabbitmq-plugins binary
+/usr/lib/rabbitmq/bin/rabbitmq-plugins enable rabbitmq_management
+service rabbitmq-server restart
