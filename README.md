@@ -11,6 +11,7 @@ These are parameters used by deploy_cluster.  These augment the parameters that 
 - giturl - The URL to the git repo.  This defaults to the service name appended to "repobase" defined in the global section.
 - host - The host assigned to run the service.  This will be automatically assigned via mkvm
 - proxytype - Used in setup_www to generate the nginx config file.  Valid options are fastcgi, proxy, or skip.
+- skipdeploy - If set then skip deploying this service
 - skip-test - Do not run "make test" for this service.
 - test-args - Optional test args added to the "make" command.  This overrides the default so you must include the target name (i.e. test)
 - type - Type of module.  Should be service or lib.  Lib modules are not assigned to a host.

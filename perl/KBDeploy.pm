@@ -101,6 +101,7 @@ sub hostlist {
   my %l;
   for my $s (keys %{$cfg->{services}}){
     my $h=$cfg->{services}->{$s}->{host};
+    next if defined $cfg->{services}->{$s}->{skipdeploy};
     $l{$h}=1 if defined $h;
   }
   return join ',',sort keys %l;
@@ -484,9 +485,18 @@ sub redeploy_service {
     return 0 if /^Done$/;
     chomp;
     my ($s,$url,$hash)=split;
-    return 1 if $url ne $cfg->{services}->{$s}->{giturl};
-    return 1 if ! defined $cfg->{services}->{$s}->{hash};
-    return 1 if $hash ne $cfg->{services}->{$s}->{hash};
+    if ($url ne $cfg->{services}->{$s}->{giturl}){
+      print " - Redeploy change in URL for $s\n";
+      return 1;
+    }
+    if (! defined $cfg->{services}->{$s}->{hash}){
+      print " - Redeploy no hash for $s\n";
+      return 1;
+    }
+    if ($hash ne $cfg->{services}->{$s}->{hash}){
+      print " - Redeploy change in hash for $s\n";
+      return 1;
+    }
   }
  
   # Missing Done flag 
