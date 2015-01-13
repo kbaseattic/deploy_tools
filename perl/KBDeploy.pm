@@ -101,6 +101,7 @@ sub hostlist {
   my %l;
   for my $s (keys %{$cfg->{services}}){
     my $h=$cfg->{services}->{$s}->{host};
+    next if defined $cfg->{services}->{$s}->{skipdeploy};
     $l{$h}=1 if defined $h;
   }
   return join ',',sort keys %l;

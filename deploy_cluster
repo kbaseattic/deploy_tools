@@ -81,6 +81,7 @@ sub configure_vms {
     #next if $service eq $globaltag;
     print "Service: $service\n" if $debug;
     my $scfg=$cfg->{services}->{$service};
+    next if defined $scfg->{skipdeploy};
     if (! defined $scfg->{host}){
       print "- Configure $service\n" if $debug;
       my $host=shift @{$cfg->{nodes}->{available}} or die "No more nodes to allocate";
@@ -133,6 +134,7 @@ sub deploy_services{
      for my $service (@{$cfg->{servicelist}}){
        my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
        print "Running $script on $service\n";
+       next if defined $cfg->{services}->{$service}->{skipdeploy};
        mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
      }
    }
