@@ -5,6 +5,11 @@
 if [[ $1 == 'bootstrap' ]]
 then
   apt-get update
+  apt-get -y install python-software-properties
+  add-apt-repository "deb http://www.rabbitmq.com/debian/ testing main"
+  wget http://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+  apt-key add rabbitmq-signing-key-public.asc
+  apt-get update
   apt-get -y install rabbitmq-server
   cp ./rabbitmq-config /etc/rabbitmq/
   # would like a better way to find rabbitmq-plugins binary
