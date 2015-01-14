@@ -29,6 +29,7 @@ In general, parameters are initialized to the value defined in a "[defaults]" se
 ## Global Parameters
 
 - basename - Prefix to use in front of alias names for service hosts (i.e. test-invocation)
+- baseurl - The base URL for accessing services (i.e. https://kbase.us/ or https://ci.kbase.us)
 - deploydir - Target directory for deployment (i.e. /kb/deployment)
 - devcontainer - Directory to use for the dev_container (i.e. /kb/dev_container)
 - disksize - Default disk size for a volume
