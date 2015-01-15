@@ -33,6 +33,7 @@ my $awe=$cfg->{services}->{narrative}->{'awe-url'};
 my $njs=$cfg->{services}->{narrative}->{'njs-url'};
 my $njsw=$cfg->{services}->{narrative}->{'njsw-url'};
 my $njp=$cfg->{services}->{narrative}->{'njp-url'};
+my $wsid=$cfg->{services}->{narrative}->{'example-wsid'};
 
 chdir "$UI";
 print "Deploying ui-common\n";
@@ -80,7 +81,12 @@ mysystem('sed -i "s/\"narrative_job_proxy\":.*/\"narrative_job_proxy\": \"'.$njp
 $njsw=~s/\//\\\//g;
 mysystem('sed -i "s/\"job_service\":.*/\"job_service\": \"'.$njsw.'\",/" '.$cj);
 
-# Now for the narrative url
+# Fix up example tab
+# Replace: exampleWsId: 2901, // designed to be a workspace with just a handful of objects
+my $js=$DC."/modules/narrative/src/notebook/ipython_profiles/profile_narrative/kbase_templates/static/kbase/js/widgets/narrative_core/kbaseNarrativeExampleDataTab.js";
+mysystem('sed -i "s/exampleWsId:.*,/exampleWsId: '.$wsid.',/" '.$js);
+
+# Now build
 print "Running buildNarrativeContainer\n";
 mysystem("sh ./buildNarrativeContainer.sh");
 
