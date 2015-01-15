@@ -172,6 +172,7 @@ sub clonetag {
   # get the service name (which may be different than the package name
   my $serv=$reponame2service{$package};
   my $repo=$repo{$package};
+  die "no repo defined for $serv!" unless $repo;
   my $mytag=$cfg->{services}->{$serv}->{hash};
   my $mybranch=$cfg->{services}->{$serv}->{'git-branch'};
 
