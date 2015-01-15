@@ -37,6 +37,7 @@ $mcfg->WriteConfig($file) or die "Unable to write $file";
 # want to make a new start_service and stop_service script
 # with correct env vars (I hope a temp measure)
 
+mysystem("cp $KB_DC/modules/$service/server/*control* $KB_DEPLOY/services/$service/");
 open START,'>', "$KB_DEPLOY/services/$service/start_service" or die "can't open start file: $!";
 print START "#!/bin/bash\n";
 print START "ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service/var $KB_DEPLOY/services/$service/start_control_server\n";
