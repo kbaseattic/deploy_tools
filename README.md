@@ -41,6 +41,26 @@ In general, parameters are initialized to the value defined in a "[defaults]" se
 - setup - Default setup script
 - xcatgroup - The XCAT group to include all nodes in
 
+## Adding a new service
+
+Here are the steps to add a new service to an existing cluster.
+
+1. Add the stanza to the cluster.ini file.  Be sure to mark the type as service if that is not the default
+
+2. Provision a node using ./deploy_cluster mkvm.  This should assign a node from the pool if there are available nodes.
+
+3. Boot a node using ./deploy_cluster boot or just rpower <new node>.  You cannot use the alias name (i.e. test01 not test-idserver).
+
+3a. Run any fix up steps for the node by-hand as root (if needed).  There may be missing dependencies, accounts, mounts, etc that aren't yet included in the base image.  So those must be done out of band.  Generally there should be a fixup.sh script that helps automate this, but it is cluster specific.
+
+4. Regenerate the hash file so that the tag for the new module is captured.  If you want to limit the deploy to just the new service, you may want to generate the new tag file, grep for the new module, then add the line by hand to the active tag file.
+
+5. Sync the deploy and config file with ./deploy_cluster syncdt
+
+6. Deploy using ./deploy_cluster deploy all <tag file>
+
+7. Test and redeploy.  If the code doesn't change (no new tag) but you need a redeploy you can use ./deploy_cluster resetdeploy <hostname>
+
 ## TODO
 
-Some of the parameters in global should be in defaults and vice versa.
+- Allow the user to specify the filename instead of cluster.ini
