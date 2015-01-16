@@ -49,15 +49,16 @@ mysystem("ln -s $KB_DC/modules/$service_dir/module_bin $KB_DEPLOY/");
 
 my $arast_url=$cfg->{services}->{$service}->{'serverurl'};
 my $arast_worker_threads=$cfg->{services}->{$service}->{'worker-threads'};
+my $arast_data_dir=$cfg->{services}->{$service}->{'local-data-dir'};
 mysystem("cp $KB_DC/modules/$service_dir/server/*compute* $KB_DEPLOY/services/$service_dir/");
 open START,'>', "$KB_DEPLOY/services/$service_dir/start_service" or die "can't open start file: $!";
 print START "#!/bin/bash\n";
-print START "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/start_compute_server\n";
+print START "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_DATA_DIR=$arast_data_dir ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/start_compute_server\n";
 close START;
 
 open STOP,'>', "$KB_DEPLOY/services/$service_dir/stop_service" or die "can't open stop file: $!";
 print STOP "#!/bin/bash\n";
-print STOP "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/stop_compute_server\n";
+print STOP "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_DATA_DIR=$arast_data_dir ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/stop_compute_server\n";
 close STOP;
 
 chmod 0755, "$KB_DEPLOY/services/$service_dir/start_service","$KB_DEPLOY/services/$service_dir/stop_service";
