@@ -17,7 +17,7 @@ $base_url=~s/\///;
 
 my @sl=myservices();
 my $service=$sl[0];
-$service_dir=$cfg->{$service}->{'basedir'};
+my $service_dir=$cfg->{$service}->{'basedir'};
 
 print "Service: $service\n";
 
@@ -47,6 +47,7 @@ mysystem("chmod 777 $KB_DEPLOY/services/$service_dir/data");
 mysystem("ln -s $KB_DC/modules/$service_dir/module_bin $KB_DEPLOY/");
 
 my $arast_url=$cfg->{$service}->{'serverurl'};
+my $arast_worker_threads=$cfg->{$service}->{'worker-threads'};
 mysystem("cp $KB_DC/modules/$service_dir/server/*compute* $KB_DEPLOY/services/$service_dir/");
 open START,'>', "$KB_DEPLOY/services/$service_dir/start_service" or die "can't open start file: $!";
 print START "#!/bin/bash\n";
