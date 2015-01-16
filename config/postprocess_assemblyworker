@@ -5,48 +5,53 @@ use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
 use strict;
 
-my $service="assembly";
-
 my $cfg=read_config();
 # We should know what service to run.  This is
 # just a safety measure in case it gets run on the wrong host.
 my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
 my $KB_DC=$cfg->{'global'}->{devcontainer};
+my $KB_RUNTIME=$cfg->{'global'}->{runtime};
 my $base_url=$cfg->{global}->{'baseurl'};
 $base_url=~s/http.*\/\///;
 $base_url=~s/\///;
 
-
 my @sl=myservices();
 my $service=$sl[0];
+$service_dir=$cfg->{$service}->{'basedir'};
 
 print "Service: $service\n";
 
-# Fix up config
-my $file=$KB_DEPLOY."/lib/assembly/arast.conf";
-my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
+# needed later: fangfang is going to separate out comp tools code
+# from apt package code, so add-comp can be run here
 
+# Fix up config (not sure needed for compute node)
+#my $file=$KB_DEPLOY."/lib/assembly/arast.conf";
+#my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 # need to populate appropriate stanzas in arast.conf from $cfg
-$mcfg->setval('assembly','mongo_host',$cfg->{services}->{$service}->{'mongodb-host'}) or die "unable to set mongo_host";
-$mcfg->setval('assembly','rabbitmq_host',$cfg->{services}->{$service}->{'rabbitmq-host'}) or die "unable to set rabbitmq_host";
-$mcfg->setval('shock','host',$cfg->{services}->{$service}->{'shock_url'}) or die "unable to set shock host";
-
-warn "Updating $file";
-$mcfg->WriteConfig($file) or die "Unable to write $file";
+#$mcfg->setval('assembly','mongo_host',$cfg->{services}->{$service}->{'mongodb-host'}) or die "unable to set mongo_host";
+#$mcfg->setval('assembly','rabbitmq_host',$cfg->{services}->{$service}->{'rabbitmq-host'}) or die "unable to set rabbitmq_host";
+#$mcfg->setval('shock','host',$cfg->{services}->{$service}->{'shock_url'}) or die "unable to set shock host";
+#warn "Updating $file";
+#$mcfg->WriteConfig($file) or die "Unable to write $file";
 
 # want to make a new start_service and stop_service script
 # with correct env vars (I hope a temp measure)
 
-open START,'>', "$KB_DEPLOY/services/$service/start_service" or die "can't open start file: $!";
+# ARAST_URL=https://ci.kbase.us/services/assembly ARAST_WORKER_THREADS=2 ARAST_DATA_DIR=/kb/deployment/services/assembly/data/ ARAST_BIN_DIR=/kbase/runtimes/20140109-prod/assembly/ ARAST_VAR_DIR=/kb/deployment/services/assembly/var ARAST_LIB_DIR=/kb/deployment/lib/ /kb/deployment/services/assembly/restart_compute_server
+
+my $arast_url=$cfg->{$service}->{'serverurl'};
+mysystem("cp $KB_DC/modules/$service_dir/server/*compute* $KB_DEPLOY/services/$service_dir/");
+open START,'>', "$KB_DEPLOY/services/$service_dir/start_service" or die "can't open start file: $!";
 print START "#!/bin/bash\n";
-print START "ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service/var $KB_DEPLOY/services/$service/start_control_server\n";
+print START "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/start_compute_server\n";
 close START;
-open STOP,'>', "$KB_DEPLOY/services/$service/stop_service" or die "can't open stop file: $!";
+
+open STOP,'>', "$KB_DEPLOY/services/$service_dir/stop_service" or die "can't open stop file: $!";
 print STOP "#!/bin/bash\n";
-print STOP "ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service/var $KB_DEPLOY/services/$service/stop_control_server\n";
+print STOP "ARAST_URL=$arast_url ARAST_WORKER_THREADS=$arast_worker_threads ARAST_BIN_DIR=$KB_RUNTIME/assembly ARAST_LIB_DIR=$KB_DEPLOY/lib ARAST_VAR_DIR=$KB_DEPLOY/services/$service_dir/var $KB_DEPLOY/services/$service_dir/stop_compute_server\n";
 close STOP;
 
-chmod 0755, "$KB_DEPLOY/services/$service/start_service","$KB_DEPLOY/services/$service/stop_service";
+chmod 0755, "$KB_DEPLOY/services/$service_dir/start_service","$KB_DEPLOY/services/$service_dir/stop_service";
 
 #mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
 #mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
