@@ -23,6 +23,8 @@ print "Service: $service\n";
 
 # needed later: fangfang is going to separate out comp tools code
 # from apt package code, so add-comp can be run here
+# package list for apt and pip should be put in bootstrap, runtime,
+# or somewhere else (so it can be run as root in a prep step)
 
 # Fix up config (not sure needed for compute node)
 #my $file=$KB_DEPLOY."/lib/assembly/arast.conf";
@@ -39,6 +41,11 @@ print "Service: $service\n";
 
 # ARAST_URL=https://ci.kbase.us/services/assembly ARAST_WORKER_THREADS=2 ARAST_DATA_DIR=/kb/deployment/services/assembly/data/ ARAST_BIN_DIR=/kbase/runtimes/20140109-prod/assembly/ ARAST_VAR_DIR=/kb/deployment/services/assembly/var ARAST_LIB_DIR=/kb/deployment/lib/ /kb/deployment/services/assembly/restart_compute_server
 
+mysystem("mkdir -p $KB_DEPLOY/services/$service_dir/data");
+mysystem("chmod 777 $KB_DEPLOY/services/$service_dir/data");
+# temp measure: need a symlink to module_bin
+mysystem("ln -s $KB_DC/modules/$service_dir/module_bin $KB_DEPLOY/");
+
 my $arast_url=$cfg->{$service}->{'serverurl'};
 mysystem("cp $KB_DC/modules/$service_dir/server/*compute* $KB_DEPLOY/services/$service_dir/");
 open START,'>', "$KB_DEPLOY/services/$service_dir/start_service" or die "can't open start file: $!";
@@ -53,6 +60,4 @@ close STOP;
 
 chmod 0755, "$KB_DEPLOY/services/$service_dir/start_service","$KB_DEPLOY/services/$service_dir/stop_service";
 
-#mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
-#mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
 
