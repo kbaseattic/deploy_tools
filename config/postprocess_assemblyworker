@@ -17,9 +17,10 @@ $base_url=~s/\///;
 
 my @sl=myservices();
 my $service=$sl[0];
-my $service_dir=$cfg->{$service}->{'basedir'};
+my $service_dir=$cfg->{services}->{$service}->{'basedir'};
 
 print "Service: $service\n";
+print "Servicedir: $service_dir\n";
 
 # needed later: fangfang is going to separate out comp tools code
 # from apt package code, so add-comp can be run here
@@ -46,8 +47,8 @@ mysystem("chmod 777 $KB_DEPLOY/services/$service_dir/data");
 # temp measure: need a symlink to module_bin
 mysystem("ln -s $KB_DC/modules/$service_dir/module_bin $KB_DEPLOY/");
 
-my $arast_url=$cfg->{$service}->{'serverurl'};
-my $arast_worker_threads=$cfg->{$service}->{'worker-threads'};
+my $arast_url=$cfg->{services}->{$service}->{'serverurl'};
+my $arast_worker_threads=$cfg->{services}->{$service}->{'worker-threads'};
 mysystem("cp $KB_DC/modules/$service_dir/server/*compute* $KB_DEPLOY/services/$service_dir/");
 open START,'>', "$KB_DEPLOY/services/$service_dir/start_service" or die "can't open start file: $!";
 print START "#!/bin/bash\n";
