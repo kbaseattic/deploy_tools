@@ -12,6 +12,9 @@ my $cfg=read_config();
 # just a safety measure in case it gets run on the wrong host.
 my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
 my $KB_DC=$cfg->{'global'}->{devcontainer};
+my $base_url=$cfg->{global}->{'baseurl'};
+$base_url=~s/http.*\/\///;
+$base_url=~s/\///;
 
 
 my @sl=myservices();
@@ -48,6 +51,8 @@ foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
 mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
 mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
 
+mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
+mysystem("sed -i 's/\\/\\/tutorial.theseed.org/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
 
 # TODO
 #
