@@ -51,8 +51,17 @@ foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
 mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
 mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
 
+# May not be needed anymore.  Check.
 mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
 mysystem("sed -i 's/\\/\\/tutorial.theseed.org/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
+
+# 
+# Get assembly scripts
+# TODO: remove this hack
+mysystem("cp $KB_DC/modules/kb_test/methods/scripts/assemble_contigset_from_reads/*pl $KB_DEPLOY/plbin/");
+mysystem("ln -s $KB_DEPLOY/plbin/assemble_contigset_from_reads.pl $KB_DEPLOY/bin/assemble_contigset_from_reads");
+mysystem("ln -s $KB_DEPLOY/plbin/fasta_to_contigset.pl $KB_DEPLOY/bin/fasta_to_contigset");
+mysystem("sed  -i 's/\.pl//' $KB_DEPLOY/bin/assemble_contigset_from_reads");
 
 # TODO
 #
