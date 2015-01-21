@@ -1,16 +1,17 @@
 [global]
 xcatgroup=test
 basename=test
+baseurl=test.kbase.us
 maxnodes=40
 disksize=20g
 repobase=https://github.com/kbase/
 deploydir=/kb/deployment
 devcontainer=/kb/dev_container
 runtime=/kbase/runtimes/20140109-prod
-setup=setup_service
-dtdir=/root/dt
+dtdir=/tmp/dt
 hashfile=githashes
 make-options=DEPLOY_RUNTIME=$KB_RUNTIME ANT_HOME=$KB_RUNTIME/ant
+skip-deploy-client=auth,kb_model_seed,bootstrap,ui-common
 
 [defaults]
 mem=2g
@@ -18,6 +19,10 @@ cores=2
 type=service
 baseimage=ubuntu12.04.3berk3
 xcatgroups=test,vm,all
+setup=setup_service
+auto-deploy-target=deploy
+git-branch=master
+test-args=test
 
 [mongo]
 giturl=none
@@ -46,7 +51,7 @@ proxytype=skip
 
 [authorization]
 host=test06
-port=7039
+service-port=7039
 repo=auth_service
 giturl=ssh://kbase@git.kbase.us/auth_service
 basedir=authorization_server
@@ -54,39 +59,44 @@ proxytype=fastcgi
 mongodb-host=mongodb://user:xxxxxxxx@test-mongo/authorization
 
 [shock]
-port=7044
+service-port=7044
 repo=shock_service
 host=test10
 giturl=https://github.com/kbase/shock_service
 basedir=shock_service
-setup=setup_shock
 mongodb-database=shock
 mongodb-pwd=xxxxxxxx
 mongodb-host=test-mongo
 mongodb-user=shock
+site=/mnt/Shock/site
+data=/mnt/Shock/data
+logs=/mnt/Shock/logs
+gomaxprocs=4
+urlname=shock-api
 
 [awe]
-port=7107
+service-port=7107
+site-port=7108
 repo=awe_service
 host=test19
 giturl=https://github.com/kbase/awe_service
 basedir=awe_service
-setup=setup_awe
 mongodb-host=test-mongo
 mongodb-database=AWEDB
 mongodb-user=aweserv
 mongodb-pwd=xxxxxxxx
-site-url=http://kbase.us/services/docs/awe
-api-url=https://kbase.us/services/awe
+site-url=http://test.kbase.us/services/docs/awe
+api-url=https://test.kbase.us/services/awe-api
+admin-user=kbasetest
+urlname=awe-api
 
 [aweworker]
 type=worker
 giturl=https://github.com/kbase/awe_service
-setup=setup_aweworker
 host=test30
 group=test
 token=<kbasetoken>
-serverurl=https://kbase.us/services/awe
+serverurl=https://kbase.us/services/awe-api
 
 [cdmi_api]
 mem=24G
@@ -94,8 +104,13 @@ giturl=https://github.com/kbase/kb_seed
 dbhost=test-mysql
 userData=kbase_sapselect/xxxxxxxx
 dbName=kbase_sapling_v3
-port=7032
+service-port=7032
 host=test07
+port=3306
+DBD=/kb/deployment/lib/KSaplingDBD.xml
+ 
+[kb_seed]
+type=lib
 
 [UserAndJobState]
 giturl=ssh://kbase@git.kbase.us/user_and_job_state
@@ -103,7 +118,7 @@ mongodb-database=userjobstate
 mongodb-pwd=xxxxxxxx
 mongodb-host=test-mongo
 mongodb-user=ujsserv
-port=7083
+service-port=7083
 host=test08
 mem=4G
 basedir=userandjobstate
@@ -119,7 +134,7 @@ ws-admin=wstest
 backend-secret=<secret>
 mongodb-host=test-mongo
 mongodb-user=wsserv
-port=7058
+service-port=7058
 host=test09
 
 [translation]
@@ -127,7 +142,7 @@ giturl=ssh://kbase@git.kbase.us/translation
 dbhost=devdb1.newyork.kbase.us
 pass=xxxxxxxx
 blast_db_dir=/kb/deployment/services/translation/
-port=3306
+service-port=3306
 dbname=genomics_dev
 dbms=mysql
 user=genomicsselect
@@ -140,7 +155,7 @@ shock_url=http://kbase.us/services/shock/
 userandjobstate_url=https://kbase.us/services/userandjobstate/
 work_folder_path=/kbase/deployments/20140109-prod/services/CompressionBasedDistance/data
 num_pool_processes=5
-port=7102
+service-port=7102
 giturl=ssh://kbase@git.kbase.us/cbd
 urlname=cbd
 host=test17
@@ -151,7 +166,7 @@ dbhost=devdb1.newyork.kbase.us
 pass=xxxxxxxx
 dbms=mysql
 user=genomicsselect
-port=3306
+service-port=3306
 dbname=genomics_dev
 sock=
 host=test16
@@ -169,7 +184,7 @@ workspace-url=http://kbase.us/services/ws
 fbajobcache=/tmp/fbacache/
 defaultJobState=queued
 gaserver-url=http://kbase.us/services/genome_annotation
-port=7036
+service-port=7036
 giturl=ssh://kbase@git.kbase.us/KBaseFBAModeling
 urlname=KBaseFBAModeling
 host=test15
@@ -178,17 +193,17 @@ host=test15
 communities=http://api.metagenomics.anl.gov/api2.cgi/sequences/
 erdb=http://kbase.us/services/erdb_service/
 scratch=/mnt/
-port=7047
+service-port=7047
 host=test33
 
 [m5nr]
 api_host=http://localhost:7103/api.cgi
-M5NR_VERSION=9
+M5NR_VERSION=10
 SOLR_HOST=http://localhost
 SOLR_PORT=8983
 URL_BASE=http://localhost:7103/api.cgi
 SOLR_STORE=/mnt/solr
-port=7103
+service-port=7103
 host=test18
 
 [KmerAnnotationByFigfam]
@@ -196,7 +211,7 @@ giturl=https://github.com/kbase/kmer_annotation_figfam
 basedir=kmer_annotation_figfam
 kmer-data=/mnt
 host=test34
-port=7105
+service-port=7105
 
 [id_map]
 mlog_log_level=6
@@ -206,7 +221,7 @@ service-host=localhost
 mlog_log_file=service.log
 data-source=dbi:mysql:kbase_sapling_v3:test-mysql
 mysql-pass=xxxxxxxx
-port=7111
+service-port=7111
 host=test20
 
 [KBaseExpression]
@@ -219,7 +234,7 @@ userData=kbase_sapselect/xxxxxxxx
 dbName=kbase_sapling_v3
 dbUser=kbase_sapselect
 host=test31
-port=7075
+service-port=7075
 
 [probabilistic_annotation]
 pseudo_count=40
@@ -236,17 +251,17 @@ shock_url=http://kbase.us/services/shock/
 job_queue=local
 dilution_percent=80
 load_data_option=shock
-port=7073
+service-port=7073
 host=test22
 
 [genome_annotation]
 kmer_v2_data_directory=/mnt/genome_annotation/data/Data.6
 kmer_classifier_data_directory=/mnt/genome_annotation/data/kmer
-port=7050
+service-port=7050
 host=test24
 
 [genotype_phenotype_api]
-port=7067
+service-port=7067
 basedir=Genotype_PhenotypeAPI
 host=test14
 giturl=ssh://kbase@git.kbase.us/genotype_phenotype_api
@@ -255,7 +270,7 @@ giturl=ssh://kbase@git.kbase.us/genotype_phenotype_api
 mem=42G
 mongodb-connection-timeout=60
 mongodb-host=mongodb://user:xxxxxxxx@test-mongo/idserver_db
-port=7031
+service-port=7031
 host=test26
 
 [workspaceService]
@@ -264,7 +279,7 @@ mongodb-database=workspace_service
 mssserver-url=http://bio-data-1.mcs.anl.gov/services/ms_fba
 idserver-url=http://kbase.us/services/idserver
 mongodb-host=mongodb://user:xxxxxxxx@test-mongo/workspace_service
-port=7058
+service-port=7058
 repo=workspace_service
 giturl=ssh://kbase@git.kbase.us/workspace_service
 urlname=workspace
@@ -281,26 +296,26 @@ mlog_log_level=6
 mysql-pass=xxxxxxxx
 mysql-perm=ALL
 default-shock-server=http://kbase.us/services/shock/
-port=7109
+service-port=7109
 host=test28
 
 [meme]
-port=7108
+service-port=7108
 host=test25
 giturl=https://github.com/kbase/meme
 
 [networks]
-port=7064
+service-port=7064
 basedir=KBaseNetworksService
 host=test21
 giturl=https://github.com/kbase/networks
 
 [ontology_service]
-port=7062
+service-port=7062
 host=test23
 
 [plant_expression_service]
-port=7063
+service-port=7063
 basedir=PlantExpressionService
 giturl=ssh://kbase@git.kbase.us/plant_expression_service
 host=test11
@@ -312,7 +327,7 @@ authenticated-storage-dir=/data/storage-auth
 nonauthenticated-storage-dir=/data/storage-nonauth
 nonauthenticated-storage=/data/storage-nonauth
 authenticated-storage=/data/storage-auth
-port=7049
+service-port=7049
 host=test05
 
 [CoExpression]
@@ -322,7 +337,7 @@ ujs_url=http://kbase.us/services/ujs/
 awe_url=http://kbase.us/services/awe/
 shock_url=http://kbase.us/services/shock/
 ws_url=http://kbase.us/services/ws/
-port=7063
+service-port=7063
 
 [genome_comparison]
 giturl=https://github.com/kbase/genome_comparison_canon
@@ -331,14 +346,14 @@ temp.dir=/scratch/genome_comparison
 blast.dir=/kb/deployment/services/genome_comparison/blast/linux
 ws.url=https://kbase.us/services/ws/
 ujs.url=https://kbase.us/services/userandjobstate/
-port=7123
+service-port=7123
 host=test35
 
 [KBaseProteinStructure]
 md5pdbmapfile=/kb/deployment/services/protein_structure_service/pdb/pdb.md5.tab
 blastdb=/kb/deployment/services/protein_structure_service/pdb/pdb_md5_prot
 giturl=ssh://kbase@git.kbase.us/protein_structure_service
-port=7088
+service-port=7088
 host=test36
 
 [bootstrap]
@@ -383,9 +398,14 @@ giturl=ssh://kbase@git.kbase.us/kmer_annotation_figfam
 [kbrest_common]
 type=lib
 
-[erdb_service]
-type=lib
-giturl=ssh://kbase@git.kbase.us/erdb_service
+[erdb]
+service-port=7099
+DBD=/kb/deployment/lib/KSaplingDBD_Published.xml
+userData=kbase_sapselect/xxxxxxxx
+dbName=kbase_sapling_v4
+giturl=https://github.com/kbase/erdb_service
+urlname=erdb_service
+basedir=erdb_service
 
 [java_type_generator]
 type=lib
@@ -402,8 +422,15 @@ mongodb-user=wsserv
 
 [narrative]
 host=test04
-setup=setup_narrative
-port=7122
+service-port=7122
+service-url=https://narrative-test.kbase.us/
+git-branch=staging
+deploy=ui-common
+auto-deploy-target=deploy-client
+awe-url=https://test.kbase.us/services/awe-api
+njs-url=https://test.kbase.us/services/narrative_job_service
+njsw-url=https://test.kbase.us/services/njs_wrapper
+njp-url=http://localhost:7068
 
 [uploader]
 type=lib
@@ -414,7 +441,7 @@ giturl=ssh://kbase@git.kbase.us/search
 mem=20g
 cores=4
 host=test29
-port=7078
+service-port=7078
 config_path=/kb/deployment/services/search/config
 solr_url=http://localhost:7077/
 solr_auth_required=False
@@ -423,3 +450,108 @@ solr_pass=xxxxxxxx
 log_level=INFO
 log_syslog=True
 log_file=/kb/deployment/services/search/search_service.log
+
+
+[kbwf_common]
+type=lib
+
+[matR]
+type=lib
+giturl=https://github.com/kbase/matR
+
+[NarrativeMethodStore]
+method-spec-cache-size=5000
+method-spec-git-repo-refresh-rate=2
+server-threads=20
+method-spec-git-repo-local-dir=narrative_method_specs
+service-port=7125
+method-spec-git-repo-branch=dev
+max-memory=1500
+min-memory=1000
+method-spec-git-repo=https://github.com/kbase/narrative_method_specs
+giturl=https://github.com/kbase/narrative_method_store
+basedir=narrative_method_store
+urlname=narrative_method_store
+host=test40
+
+[narrative_job_service]
+giturl=https://github.com/kbase/narrative_job_service
+log_dir=/kb/deployment/services/narrative_job_service
+ws_url=https://ci.kbase.us/services/ws
+awe_url=http://ci.kbase.us/services/awe-api
+shock_url=http://ci.kbase.us/services/shock-api
+client_group=ci
+script_wrapper=njs-run-step
+service_wrappers=njs-run-fba-modeling,njs-run-genome-annotation
+supported_services=KBaseFBAModeling,genome_annotation
+service-port=7080
+host=test37
+
+[NarrativeJobService]
+# this the NJS wrapper service
+service-port=8200
+urlname=njs_wrapper
+basedir=njs_wrapper
+giturl=https://github.com/scanon/njs_wrapper
+scratch=/tmp/njs
+queue.db.dir=/tmp/njs/queue
+workspace.srv.url=https://ci.kbase.us/services/ws
+#workspace.srv.url=http://dev04.berkeley.kbase.us:7058
+jobstatus.srv.url=https://ci.kbase.us/services/userandjobstate/
+njs.srv.url=https://ci.kbase.us/services/narrative_job_service
+running.tasks.per.user=5
+## It sets the number of jobs working in background,
+## it should probably be close to the number of cores.
+thread.count=50
+## Please change next flag before you reboot machine.
+## It will help keep tasks in queue and rerun them later.
+## Don't forget to revert this flag after reboot.
+reboot.mode=false
+## This user can run list_running_apps method to get states
+## of all running apps (running internally on wrapper side).
+admin.user=kbasetest
+host=test38
+
+[UserProfile]
+giturl=https://github.com/kbase/user_profile
+# host where mongo lives, e.g. localhost:27017
+mongodb-host=test-mongo
+# name of the workspace mongo database
+mongodb-database=user_profile_db
+# the user name for an account with readWrite access to the database
+mongodb-user=upserv
+# password for the account
+mongodb-pwd=xxxxxxxx
+# MongoDB reconnect retry count. The service will try to reconnect 1/s until
+# this limit has been reached.
+mongodb-retry=0
+# the user name for an administrator
+admin=kbuserprofileadmin
+# port for the service.
+port=7126
+service-port=7126
+basedir=user_profile
+# server thread count - this determines the number of requests that can be
+# processed simultaneously.
+server-threads=20
+#Minimum memory size in MB.
+min-memory=1000
+#Maximum memory size in MB.
+max-memory=2000
+host=test41
+urlname=user_profile
+
+[Transform]
+giturl=https://github.com/kbase/transform
+awe_url=https://kbase.us/services/awe-api
+ujs_url=https://kbase.us/services/userandjobstate/
+shock_url=https://kbase.us/services/shock-api
+ws_url=https://kbase.us/services/ws
+clientgroups=ci
+svc_ws_name=loader_test
+svc_ws_cfg_name=script_configs
+svc_ws_un=kbasetest
+svc_ws_pw=@Suite525
+urlname=transform
+host=test43
+service-port=7778
