@@ -53,6 +53,7 @@ mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
 
 mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
 mysystem("sed -i 's/\\/\\/tutorial.theseed.org/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
+mysystem("$KB_DEPLOY/lib/biokbase/AbstractHandle/__init__.py");
 
 # TODO
 #
