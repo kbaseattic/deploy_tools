@@ -11,6 +11,7 @@ while(<I>){
   s/\/.*/\/xxxxxxxx/ if /userData=/;
   s/token=.*/token=<kbasetoken>/;
   s/secret=.*/secret=<secret>/;
+  s/^host=.*/host=<XXXXX>/;
   print;
 }
 
