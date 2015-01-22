@@ -1,3 +1,10 @@
+
+
+Wish List:
+- Allow IP addresses instead of hostnames
+- Flesh out boot strap option
+- Add "local" directory for private/local data (i.e. ssl files, host files, etc)
+
 for ci-:
 - add DNS entries for ci.kbase.us, narrative-ci.kbase.us
 - add public interfaces for ci.kbase, narrative-ci
@@ -46,6 +53,7 @@ Completed
 - Add ability to tag current head and insert tag into cluster.ini file
 - add mysql-client to base (added to bootstrape_node which is still evolving)
 - Split up deploy_service for the git checkout portion and the build step
+- Add no-op option
 
 complete for ci-:
 - figure out mongo auth config so setup_mongo works

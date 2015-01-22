@@ -21,6 +21,7 @@ exit unless scalar(@sl);
 
 my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
 $narr_host=~s/http.*\/\///;
+$narr_host=~s/[\/]+//;
 # base URL for references to other services
 my $base_url=$cfg->{global}->{'baseurl'};
 $base_url=~s/http.*\/\///;
@@ -31,12 +32,11 @@ my $njsw=$cfg->{services}->{narrative}->{'njsw-url'};
 my $njp=$cfg->{services}->{narrative}->{'njp-url'};
 my $wsid=$cfg->{services}->{narrative}->{'example-wsid'};
 
-
+my $nginxcfg="/etc/nginx/sites-available/default";
+mysystem('sed -i \'s/narrative.kbase.us/'.$narr_host.'/\' '.$DT."/config/narrative.nginx");
 # copy nginx file (assumes file is owned by current user (jenkins for CI env))
-mysystem("cp $DT/config/narrative.nginx /etc/nginx/sites-available/default");
+mysystem("cp $DT/config/narrative.nginx $nginxcfg");
 # todo: how to restart nginx as non-root?  add user to nginx group?
-mysystem('sed -i /etc/nginx/sites-avaialble/default \'s/narrative.kbase.us/'.$narr_host.'/\'');
-
 
 chdir "$UI";
 print "Deploying ui-common\n";

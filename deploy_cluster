@@ -1,62 +1,68 @@
 #!/usr/bin/env perl 
 
 use lib './perl';
-use Switch;
 use Data::Dumper;
 use KBDeploy;
 use KBProvision;
+use Getopt::Std;
 use strict;
 
 my $debug=0;
+my %opt;
+my $dry_run=0;
+my $force;
+my $defcfgfile='cluster.ini';
+my $cfgfile=$defcfgfile;
+getopts('nfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
 
+$dry_run=1 if (defined $opt{n});
+$force=1 if (defined $opt{f});
+$debug=1 if (defined $opt{d});
+$cfgfile=$opt{c} if (defined $opt{c});
 
-
-my $cfg=read_config();
+my $cfg=read_config($cfgfile);
 my $global=$cfg->{global};
 my $basedir=$global->{dtdir};
-my $cfgfile='cluster.ini';
 
-my $command=shift @ARGV;
+my $_=shift @ARGV;
 
-switch ($command) {
-  case /mkvm/ {
+if (/mkvm/) {
     update_available();
     configure_vms();
-  }
-  case /boot/ {
+}
+elsif (/boot/) {
     KBProvision::boot_nodes($global->{xcatgroup});
-  }
-  case /syncdt/ {
+}
+elsif (/syncdt/) {
     sync_dt(@ARGV);
-  }
-  case /^deploy/ {
+}
+elsif (/^deploy/) {
     deploy_services(@ARGV);
-  }
-  case /updatehostassignments/ {
+}
+elsif (/updatehostassignments/) {
      update_available();
-  }
-  case /status/ {
+}
+elsif (/status/) {
      status();
-  }
-  case /start/ {
+}
+elsif (/start/) {
     start(@ARGV);
-  }
-  case /stop/ {
+}
+elsif (/stop/) {
     stop(@ARGV);
-  }
-  case /test/ {
+}
+elsif (/test/) {
     run_test(@ARGV);
-  }
-  case /mkhashfile$/ {
+}
+elsif (/mkhashfile$/) {
      KBDeploy::mkhashfile($ARGV[0]);
-  }
-  case /resetdeploy/ {
+}
+elsif (/resetdeploy/) {
      resetdeploy(@ARGV);
-  }
-  else {
+}
+else {
     printf stderr "Usage: $0 <mkvm|boot|syncdt|deploy|start [all]|stop [all]|test [all]|mkhashfile|resetdeploy>\n";
     exit 1;
-  }
 }
 
 
@@ -81,7 +87,10 @@ sub configure_vms {
     #next if $service eq $globaltag;
     print "Service: $service\n" if $debug;
     my $scfg=$cfg->{services}->{$service};
-    next if defined $scfg->{skipdeploy};
+    if (defined $scfg->{skipdeploy}){
+      print "- skipdeploy set.  Skipping\n";
+      next;
+    }
     if (! defined $scfg->{host}){
       print "- Configure $service\n" if $debug;
       my $host=shift @{$cfg->{nodes}->{available}} or die "No more nodes to allocate";
@@ -108,7 +117,7 @@ sub sync_dt {
    warn "syncing dt to hosts $list";
    KBProvision::run_remote_all($list,"[ -e $basedir ] || mkdir $basedir");
    mysystem("pdcp -w $list $0 $basedir/$0");
-   mysystem("pdcp -w $list $cfgfile $basedir/$cfgfile");
+   mysystem("pdcp -w $list $cfgfile $basedir/$defcfgfile");
    mysystem("pdcp -w $list -r perl $basedir/");
    mysystem("pdcp -w $list -r config $basedir/");
 }
@@ -117,32 +126,72 @@ sub sync_dt {
 # Deploy service
 #
 sub deploy_services{
-   my $hashfile=shift;
+   my $option=shift;
+   my $hashfile;
+   my $remote=0;
+   my $list;
+   my @sl;
 
-   if ($hashfile eq 'all'){
+   my $opts='';
+   $opts.=' -n' if $dry_run;
+   $opts.=' -f' if $force;
+
+   if ($option eq 'all'){
+     print "Deploy All\n";
+     $list=KBDeploy::hostlist();
+     @sl=@{$cfg->{servicelist}};
+     $remote=1;
+   }
+   elsif (defined $cfg->{services}->{$option}){
+     $list=$cfg->{services}->{$option}->{host};
+     push @sl,$option;
+     print "Deploy $option on $list\n";
+     $remote=1;
+   }
+   elsif ($option eq 'local'){
+     print "Local Deploy\n";
+   }
+   else {
+     print "Local Deploy\n";
+     unshift @_,$option;
+   }
+   $hashfile=shift;
+   if (defined $hashfile){
+     if (! -e $hashfile){
+       print STDERR "Missing Hashfile $hashfile\n";
+       exit 1;
+     }
+     else{
+       print STDERR "Hashfile: $hashfile\n";
+     }
+   }
+   
+   if ($remote){
      update_available();
-     my $list=KBDeploy::hostlist();
-     KBProvision::sync_files($list,$basedir,$cfgfile);
-     $hashfile=shift;
      if (defined $hashfile){
        KBProvision::sync_files($list,$basedir,$hashfile);
-       $hashfile=~s/.*\/// if defined $hashfile;
-       print STDERR "Hasfile: $hashfile\n";
+       # Remove path stuff
+       $hashfile=~s/.*\///;
+       #print STDERR "Hashfile: $hashfile\n";
      }
+     KBProvision::sync_file($list,$basedir,$cfgfile,$defcfgfile);
    
      #Now run the local scripts
-     for my $service (@{$cfg->{servicelist}}){
+     for my $service (@sl){
        my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
        print "Running $script on $service\n";
-       next if defined $cfg->{services}->{$service}->{skipdeploy};
-       mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $hashfile'");
+       if (defined $cfg->{services}->{$service}->{skipdeploy}){
+         print " - skipdeploy set.  Skipping\n";
+         next;
+       }
+       mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $opts $hashfile'");
      }
    }
    else{
-     my @sl=myservices();
+     @sl=myservices();
      for my $service (@sl){
         my $script=$cfg->{services}->{$service}->{setup};
-        mysystem("cd $basedir/config;./$script $hashfile");
+        mysystem("cd $basedir/config;./$script $opts $hashfile");
      }
    }
 }
