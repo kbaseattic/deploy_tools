@@ -2,7 +2,18 @@
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
+use Getopt::Std;
 use strict;
+
+my %opt;
+my $force=0;
+my $dryrun=0;
+my $bootstrap=0;
+
+getopts('nfb',\%opt);
+$dryrun=1 if defined $opt{n};
+$bootstrap=1 if defined $opt{b};
+$force=1 if defined $opt{f};
 
 # Parameters
 my $debug=0;
@@ -16,7 +27,12 @@ my @sl=myservices();
 die "Only run this on the www host\n" unless $sl[0] eq 'www';
 
 
-bootstrap() if ($ARGV[0] eq 'bootstrap');
+bootstrap() if $bootstrap;
+
+if ($dryrun){
+  print " - Exiting in dry run mode.\n";
+  exit;
+}
 
 # Create document area
 mkdir "/kb" if ( ! -e "/kb/");

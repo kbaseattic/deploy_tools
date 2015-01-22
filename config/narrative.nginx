@@ -19,25 +19,34 @@
 
 #init_by_lua 'cjson = require "cjson"';
 
-lua_shared_dict proxy_map 1m;
-lua_shared_dict proxy_last 100k;
-lua_shared_dict proxy_last_ip 200k;
-lua_shared_dict proxy_state 100k;
+lua_shared_dict session_map 1m;
+lua_shared_dict docker_map 2m;
+lua_shared_dict token_cache 2m;
 lua_shared_dict proxy_mgr 100k;
-lua_shared_dict proxy_token_cache 100k;
-
+lua_shared_dict lock_map 2m;
+ 
+# load lua files
 lua_package_path "/kb/deployment/services/narrative/docker/?;/kb/deployment/services/narrative/docker/?.lua;;";
-
+ 
+# initilize proxymgr - set shared dictionaries
 init_by_lua '
-    json = require("json")
-    proxymgr = require("proxy_mgr")
-    proxymgr:initialize{ proxy_map = ngx.shared.proxy_map,
-                         proxy_last = ngx.shared.proxy_last,
-			 proxy_last_ip = ngx.shared.proxy_last_ip,
-			 proxy_state = ngx.shared.proxy_state,
-			 proxy_token_cache = ngx.shared.proxy_token_cache,
-			 proxy_mgr = ngx.shared.proxy_mgr }
+     json = require("json")
+     proxymgr = require("proxy_mgr")
+    proxymgr:initialize{
+        lock_name = "lock_map",
+        session_map = ngx.shared.session_map,
+        docker_map = ngx.shared.docker_map,
+        token_cache = ngx.shared.token_cache,
+        proxy_mgr = ngx.shared.proxy_mgr
+    }
 ';
+
+# start worker processes
+init_worker_by_lua '
+    proxymgr:check_marker()
+    proxymgr:check_provisioner(0)
+';
+
 
 server {
 	#listen   80; ## listen for ipv4; this line is default and implied
@@ -47,11 +56,11 @@ server {
 	index home.html home.shtml;
 
 	# Make site accessible from http://localhost/
-        server_name   narrative-dev.kbase.us;
+        server_name   narrative.kbase.us;
 
 	# Setup a DNS resolver
 	resolver 8.8.8.8;
-	return       301 https://narrative-dev.kbase.us$request_uri;
+	return       301 https://narrative.kbase.us$request_uri;
 
 	location / {
 		root /kb/deployment/ui-common;
@@ -204,7 +213,7 @@ server {
 #
 server {
        listen 443;
-       server_name narrative-dev.kbase.us;
+       server_name narrative.kbase.us;
 
 	root /kb/deployment;
 	index home.html home.shtml;

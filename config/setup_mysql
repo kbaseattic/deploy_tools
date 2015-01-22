@@ -3,7 +3,18 @@
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
+use Getopt::Std;
 use strict;
+
+my %opt;
+my $force=0;
+my $dryrun=0;
+my $bootstrap=0;
+
+getopts('nfb',\%opt);
+$dryrun=1 if defined $opt{n};
+$bootstrap=1 if defined $opt{b};
+$force=1 if defined $opt{f};
 
 my $debug=0;
 
@@ -17,7 +28,7 @@ if (defined $cfg->{services}->{$me}->{'adminpass'}){
   $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};
 };
 
-bootstrap() if $ARGV[0] eq 'bootstrap';
+bootstrap() if $bootstrap;
 
 my %userexist;
 my %dbexist;
@@ -58,6 +69,7 @@ for my $s (keys %{$cfg->{services}}){
   }
 }
 
+exit if $dryrun;
 open(L,"ls *.sql 2>/dev/null|");
 while (<L>){
   chomp;
@@ -88,6 +100,10 @@ sub add_user {
   my $perm=shift;
 
   my $mycom;
+  if ($dryrun){
+    print " - Would add $user.  Skipping dry run.\n";
+    return;
+  }
   $perm='SELECT' if (! defined $perm);
   open(MY,"|mysql $adminpass");
   printf MY "CREATE USER '%s'\@'%%' IDENTIFIED BY '%s';\n",$user,$pass unless $userexist{$user};
