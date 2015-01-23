@@ -5,12 +5,21 @@
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
+use Getopt::Std;
 use strict;
 
-my $hashfile;
+my %opt;
+my $force=0;
+my $dryrun=0;
+my $bootstrap=0;
 
-$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
-exit if $ARGV[0] eq 'bootstrap';
+getopts('nfb',\%opt);
+$dryrun=1 if defined $opt{n};
+$bootstrap=1 if defined $opt{b};
+$force=1 if defined $opt{f};
+
+my $hashfile=shift @ARGV;
+exit if $bootstrap;
 
 my $cfg=read_config();
 
@@ -18,13 +27,18 @@ my @sl=myservices();
 exit unless scalar(@sl);
 
 mkdocs(@sl);
-exit if (! defined $hashfile && KBDeploy::is_complete(@sl) && $ARGV[0] ne '-f');
+exit if (! defined $hashfile && KBDeploy::is_complete(@sl) && $force);
 #
 # redploy_service will tell us if we need to repeploy but
 # it also populates that hashes to deploy
 my $redeploy=KBDeploy::redeploy_service("../$hashfile",@sl);
-if (! $redeploy){
-  print "No deploy required for $sl[0]\n";
+if (! $redeploy && $force==0){
+  print " - No deploy required for $sl[0]\n";
+  exit;
+}
+
+if ($dryrun){
+  print " - Redploy needed.  Exiting with dryrun\n";
   exit;
 }
 

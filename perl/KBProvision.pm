@@ -26,6 +26,22 @@ sub mysystem {
   }
 }
 
+# Propogate a single files to the basedir on each node
+#
+sub sync_file {
+   my $xg=shift;
+   my $basedir=shift;
+   my $fl=shift;
+   my $target=shift;
+
+   return 1 if $fl eq '';
+   #system("xdcp $xg $fl $basedir/ > /dev/null 2>&1");
+   return 1 unless -f $fl;
+   system("pdcp -w $xg $fl $basedir/$target > /dev/null 2>&1");
+   return 1 if $? eq 0;
+   return 0;
+}
+
 # Propogate a list of files to the basedir on each node
 #
 sub sync_files {

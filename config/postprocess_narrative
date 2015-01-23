@@ -19,21 +19,25 @@ my $UI=$DC."/modules/ui-common";
 my @sl=myservices();
 exit unless scalar(@sl);
 
-# copy nginx file (assumes file is owned by current user (jenkins for CI env))
-mysystem("cp $DT/config/narrative.nginx /etc/nginx/sites-available/default");
-# todo: how to restart nginx as non-root?  add user to nginx group?
-
-my $narr_host=$cfg->{services}->{narrative}->{'service-url'};
+my $scfg=$cfg->{services}->{narrative};
+my $narr_host=$scfg->{'service-url'};
 $narr_host=~s/http.*\/\///;
+$narr_host=~s/[\/]+//;
 # base URL for references to other services
 my $base_url=$cfg->{global}->{'baseurl'};
 $base_url=~s/http.*\/\///;
 $base_url=~s/\///;
-my $awe=$cfg->{services}->{narrative}->{'awe-url'};
-my $njs=$cfg->{services}->{narrative}->{'njs-url'};
-my $njsw=$cfg->{services}->{narrative}->{'njsw-url'};
-my $njp=$cfg->{services}->{narrative}->{'njp-url'};
-my $wsid=$cfg->{services}->{narrative}->{'example-wsid'};
+my $awe=$scfg->{'awe-url'};
+my $njs=$scfg->{'njs-url'};
+my $njsw=$scfg->{'njsw-url'};
+my $njp=$scfg->{'njp-url'};
+my $wsid=$scfg->{'example-wsid'};
+
+my $nginxcfg="/etc/nginx/sites-available/default";
+mysystem('sed -i \'s/narrative.kbase.us/'.$narr_host.'/\' '.$DT."/config/narrative.nginx");
+# copy nginx file (assumes file is owned by current user (jenkins for CI env))
+mysystem("cp $DT/config/narrative.nginx $nginxcfg");
+# todo: how to restart nginx as non-root?  add user to nginx group?
 
 chdir "$UI";
 print "Deploying ui-common\n";
@@ -83,12 +87,50 @@ mysystem('sed -i "s/\"job_service\":.*/\"job_service\": \"'.$njsw.'\",/" '.$cj);
 
 # Fix up example tab
 # Replace: exampleWsId: 2901, // designed to be a workspace with just a handful of objects
-my $js=$DC."/modules/narrative/src/notebook/ipython_profiles/profile_narrative/kbase_templates/static/kbase/js/widgets/narrative_core/kbaseNarrativeExampleDataTab.js";
-mysystem('sed -i "s/exampleWsId:.*,/exampleWsId: '.$wsid.',/" '.$js);
+if (defined $wsid) {
+  my $js=$DC."/modules/narrative/src/notebook/ipython_profiles/profile_narrative/kbase_templates/static/kbase/js/widgets/narrative_core/kbaseNarrativeExampleDataTab.js";
+  mysystem('sed -i "s/exampleWsId:.*,/exampleWsId: '.$wsid.',/" '.$js);
+}
 
 # Now build
 print "Running buildNarrativeContainer\n";
 mysystem("sh ./buildNarrativeContainer.sh");
+
+# Logging
+# TODO: try to get this in a make file or something in the repo
+#
+if (defined $scfg->{logging}){
+  mysystem("ps aux|grep kb-log-proxy|grep -v grep|awk '{print \"kill \"\$2}'|sh");
+  mysystem("cp -a $nar/src/biokbase/narrative $DEPLOY/lib/biokbase/");
+  mysystem("cp -a $nar/src/scripts/kb-* $DEPLOY/bin/");
+  mysystem("cp -a $nar/narrative-log-proxy.conf $DEPLOY/");
+
+  open(N,"> $DEPLOY/narrative-log-proxy.conf");
+  print N "# proxy listen host and port\n";
+  print N "host:  172.17.42.1\n";
+  print N "port: 32001\n";
+  print N "# mongodb server user/pass and database\n";
+  print N "db_host: ".$scfg->{'mongodb-host'}."\n";
+  print N "db_port: 27017\n";
+  print N "user: ".$scfg->{'mongodb-user'}."\n";
+  print N "password: ".$scfg->{'mongodb-pwd'}."\n";
+  print N "db: ".$scfg->{'mongodb-database'}."\n";
+  print N "collection: narrative\n";
+  
+  if (defined $scfg->{'syslog_host'}){
+    print N "# syslog destination\n";
+    print N "syslog_facility: ".$scfg->{'syslog-facility'}."\n";
+    print N "syslog_host: ".$scfg->{'syslog-host'}."\n";
+    print N "syslog_port: 514\n";
+    print N "syslog_proto: tcp\n";
+  }
+  
+  close N;
+  mysystem(". $DEPLOY/user-env.sh;kb-log-proxy -f $DEPLOY/narrative-log-proxy.conf > /tmp/narrative-log-proxy.log 2>&1 &");
+}
+
+# This kills off the old provisioned containers to pick up fresh ones
+mysystem("curl -k -X DELETE https://localhost/proxy_map/provisioned || echo Ignore error");
 
 KBDeploy::mark_complete('narrative',@sl);
 

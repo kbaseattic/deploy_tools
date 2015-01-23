@@ -3,14 +3,21 @@
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
-use strict;
+use Getopt::Std;
 use Config::IniFiles;
+use strict;
 
-exit if $ARGV[0] eq 'bootstrap';
+my %opt;
+my $bootstrap=0;
+
+# Some of these aren't used yet, but may add in the future.
+getopts('b',\%opt);
+$bootstrap=1 if defined $opt{b};
+
+exit if $bootstrap;
 
 my $hashfile;
-$hashfile=shift @ARGV if ($ARGV[0] ne '-f' && $ARGV[0] ne '-b');
-exit if $ARGV[0] eq 'bootstrap';
+$hashfile=shift;
 
 my $cfg=read_config();
 

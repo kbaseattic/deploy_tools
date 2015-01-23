@@ -3,7 +3,18 @@
 use FindBin;
 use lib "$FindBin::Bin/../perl/";
 use KBDeploy;
+use Getopt::Std;
 use strict;
+
+my %opt;
+my $force=0;
+my $dryrun=0;
+my $bootstrap=0;
+
+getopts('nfb',\%opt);
+$dryrun=1 if defined $opt{n};
+$bootstrap=1 if defined $opt{b};
+$force=1 if defined $opt{f};
 
 my $debug=0;
 
@@ -11,7 +22,7 @@ my $debug=0;
 my $cfg=read_config();
 
 # Bootstrap and exit if bootstrap flag is given
-bootstrap() if $ARGV[0] eq 'bootstrap';
+bootstrap() if $bootstrap;
 
 # Create Accounts for each service that uses mongo
 #
@@ -43,7 +54,12 @@ sub adduser {
   my ($db,$user,$pwd,$roles)=@_;
   # TODO: Add some type of check
   my $com="use $db;\ndb.createUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
-  mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
+  if ($dryrun){
+    print "- Add $user.  Skipping for dry run\n";
+  }
+  else {
+    mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
+  }
 }
 
 # Bootstrap will:

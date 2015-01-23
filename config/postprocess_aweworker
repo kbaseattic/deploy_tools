@@ -59,10 +59,13 @@ mysystem("touch $KB_DEPLOY/lib/biokbase/AbstractHandle/__init__.py");
 # 
 # Get assembly scripts
 # TODO: remove this hack
-mysystem("cp $KB_DC/modules/kb_test/methods/scripts/assemble_contigset_from_reads/*pl $KB_DEPLOY/plbin/");
-mysystem("ln -s $KB_DEPLOY/plbin/assemble_contigset_from_reads.pl $KB_DEPLOY/bin/assemble_contigset_from_reads");
-mysystem("ln -s $KB_DEPLOY/plbin/fasta_to_contigset.pl $KB_DEPLOY/bin/fasta_to_contigset");
-mysystem("sed  -i 's/\.pl//' $KB_DEPLOY/bin/assemble_contigset_from_reads");
+if ( ! -e "$KB_DEPLOY/bin/assemble_contigset_from_reads") {
+  mysystem("cp $KB_DC/modules/kb_test/methods/scripts/assemble_contigset_from_reads/*pl $KB_DEPLOY/plbin/");
+  mysystem("ln -s $KB_DEPLOY/plbin/assemble_contigset_from_reads.pl $KB_DEPLOY/bin/assemble_contigset_from_reads");
+  mysystem("ln -s $KB_DEPLOY/plbin/fasta_to_contigset.pl $KB_DEPLOY/bin/fasta_to_contigset");
+  mysystem("sed  -i 's/\.pl//' $KB_DEPLOY/bin/assemble_contigset_from_reads");
+  mysystem("sed  -i 's/\\..fasta_to_contigset/fasta_to_contigset/' $KB_DEPLOY/bin/assemble_contigset_from_reads");
+}
 
 # TODO
 #
