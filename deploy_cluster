@@ -8,16 +8,18 @@ use Getopt::Std;
 use strict;
 
 my $debug=0;
+my $verbose=0;
 my %opt;
 my $dry_run=0;
 my $force;
 my $defcfgfile='cluster.ini';
 my $cfgfile=$defcfgfile;
-getopts('nfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
+getopts('nvfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
 
 $dry_run=1 if (defined $opt{n});
 $force=1 if (defined $opt{f});
 $debug=1 if (defined $opt{d});
+$verbose=1 if (defined $opt{v});
 $cfgfile=$opt{c} if (defined $opt{c});
 
 my $cfg=read_config($cfgfile);
@@ -88,7 +90,7 @@ sub configure_vms {
     print "Service: $service\n" if $debug;
     my $scfg=$cfg->{services}->{$service};
     if (defined $scfg->{skipdeploy}){
-      print "- skipdeploy set.  Skipping\n";
+      print "- skipdeploy set.  Skipping\n" if $verbose;
       next;
     }
     if (! defined $scfg->{host}){
@@ -137,7 +139,7 @@ sub deploy_services{
    $opts.=' -f' if $force;
 
    if ($option eq 'all'){
-     print "Deploy All\n";
+     print "Deploy All\n" if $verbose;
      $list=KBDeploy::hostlist();
      @sl=@{$cfg->{servicelist}};
      $remote=1;
@@ -145,14 +147,14 @@ sub deploy_services{
    elsif (defined $cfg->{services}->{$option}){
      $list=$cfg->{services}->{$option}->{host};
      push @sl,$option;
-     print "Deploy $option on $list\n";
+     print "Deploy $option on $list\n" if $verbose;
      $remote=1;
    }
    elsif ($option eq 'local'){
-     print "Local Deploy\n";
+     print "Local Deploy\n" if $verbose;
    }
    else {
-     print "Local Deploy\n";
+     print "Local Deploy\n" if $verbose;
      unshift @_,$option;
    }
    $hashfile=shift;
@@ -162,7 +164,7 @@ sub deploy_services{
        exit 1;
      }
      else{
-       print STDERR "Hashfile: $hashfile\n";
+       print "Hashfile: $hashfile\n" if $verbose;
      }
    }
    
@@ -179,11 +181,12 @@ sub deploy_services{
      #Now run the local scripts
      for my $service (@sl){
        my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
-       print "Running $script on $service\n";
+       print "$service:\n";
        if (defined $cfg->{services}->{$service}->{skipdeploy}){
-         print " - skipdeploy set.  Skipping\n";
+         print " - Skipping: skipdeploy set.\n" if $verbose;
          next;
        }
+       print " - Running: $script $opts $hashfile\n" if $verbose;
        mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $opts $hashfile'");
      }
    }
