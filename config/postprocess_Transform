@@ -1,0 +1,26 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use strict;
+
+my $cfg=read_config();
+# We should know what service to run.  This is
+# just a safety measure in case it gets run on the wrong host.
+my $KB_DEPLOY=$cfg->{'global'}->{deploydir};
+my $KB_DC=$cfg->{'global'}->{devcontainer};
+my $base_url=$cfg->{global}->{'baseurl'};
+$base_url=~s/http.*\/\///;
+$base_url=~s/\///;
+
+
+my @sl=myservices();
+my $service=$sl[0];
+
+print "Service: $service\n";
+
+# to do: populate service.cfg file from deployment.cfg
+
+mysystem("touch $KB_DEPLOY/lib/biokbase/AbstractHandle/__init__.py");
+
