@@ -26,7 +26,22 @@ my $file=$KB_DEPLOY."/services/$service/service.cfg";
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
 # need to populate appropriate stanzas in service.cfg from $cfg
-my @keys = ();
+my @keys = qw(
+log_syslog
+log_file
+log_level
+awe_service_url
+ujs_service_url
+workspace_service_url
+shock_service_url
+handle_service_url
+working_directory
+plugins_directory
+awe_url
+ujs_url
+clientgroups
+);
+
 foreach my $key in @keys
 {
 	$mcfg->setval($service,$key,$cfg->{services}->{$service}->{$key}) or die "unable to set $key";
