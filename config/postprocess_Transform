@@ -21,6 +21,20 @@ my $service=$sl[0];
 print "Service: $service\n";
 
 # to do: populate service.cfg file from deployment.cfg
+# Fix up config
+my $file=$KB_DEPLOY."/services/$service/service.cfg";
+my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
+# need to populate appropriate stanzas in service.cfg from $cfg
+my @keys = ();
+foreach my $key in @keys
+{
+	$mcfg->setval($service,$key,$cfg->{services}->{$service}->{$key}) or die "unable to set $key";
+}
+
+warn "Updating $file";
+$mcfg->WriteConfig($file) or die "Unable to write $file";
+
+# workaround for handle service missing init file
 mysystem("touch $KB_DEPLOY/lib/biokbase/AbstractHandle/__init__.py");
 
