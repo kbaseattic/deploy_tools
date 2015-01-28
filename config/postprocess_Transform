@@ -42,7 +42,7 @@ ujs_url
 clientgroups
 );
 
-foreach my $key in @keys
+foreach my $key (@keys)
 {
 	$mcfg->setval($service,$key,$cfg->{services}->{$service}->{$key}) or die "unable to set $key";
 }
