@@ -26,7 +26,7 @@ my $cfg=read_config($cfgfile);
 my $global=$cfg->{global};
 my $basedir=$global->{dtdir};
 
-my $_=shift @ARGV;
+$_=shift @ARGV;
 
 if (/mkvm/) {
     update_available();
