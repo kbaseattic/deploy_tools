@@ -97,6 +97,7 @@ server {
 	location /proxy_map {
 	     default_type 'application/json';
 	     allow 127.0.0.1;
+	     deny all;
 
 	     set $uri_base '/proxy_map';
 	     content_by_lua 'proxymgr:set_proxy()';
@@ -234,6 +235,7 @@ server {
 	location /proxy_map {
 	     default_type 'application/json';
 	     allow 127.0.0.1;
+	     deny all;
 
 	     set $uri_base '/proxy_map';
 	     content_by_lua 'proxymgr:set_proxy()';
@@ -243,6 +245,7 @@ server {
 	location /narrative_shutdown {
 	     default_type 'application/json';
 	     allow 127.0.0.1;
+	     deny all;
 
 	     set $uri_base '/narrative_shutdown';
 	     content_by_lua 'proxymgr:narrative_shutdown()';
