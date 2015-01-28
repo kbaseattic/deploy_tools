@@ -59,6 +59,9 @@ elsif (/test/) {
 elsif (/mkhashfile$/) {
      KBDeploy::mkhashfile($ARGV[0]);
 }
+elsif (/updatehashfile$/) {
+     KBDeploy::updatehashfile(@ARGV);
+}
 elsif (/resetdeploy/) {
      resetdeploy(@ARGV);
 }
