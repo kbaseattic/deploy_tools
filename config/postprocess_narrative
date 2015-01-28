@@ -31,6 +31,7 @@ my $awe=$scfg->{'awe-url'};
 my $njs=$scfg->{'njs-url'};
 my $njsw=$scfg->{'njsw-url'};
 my $njp=$scfg->{'njp-url'};
+my $trans=$scfg->{'transform-url'};
 my $wsid=$scfg->{'example-wsid'};
 
 my $nginxcfg="/etc/nginx/sites-available/default";
@@ -84,6 +85,8 @@ $njp=~s/\//\\\//g;
 mysystem('sed -i "s/\"narrative_job_proxy\":.*/\"narrative_job_proxy\": \"'.$njp.'\",/" '.$cj);
 $njsw=~s/\//\\\//g;
 mysystem('sed -i "s/\"job_service\":.*/\"job_service\": \"'.$njsw.'\",/" '.$cj);
+$trans=~s/\//\\\//g;
+mysystem('sed -i "s/\"transform\":.*/\"transform\": \"'.$trans.'\",/" '.$cj);
 
 # Fix up example tab
 # Replace: exampleWsId: 2901, // designed to be a workspace with just a handful of objects

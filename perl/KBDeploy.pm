@@ -451,6 +451,37 @@ sub mkhashfile {
   close TF;
 }
 
+#
+# Genereate tag file
+#
+sub updatehashfile {
+  my $tagfile=shift;
+  my $ds=strftime "%Y%m%d%H%M", localtime;
+  my %update;
+  map {$update{$_}=1} @_;
+
+  my $out;
+  open(TF,$tagfile) or die "Unable to open $tagfile\n";
+  while(<TF>){
+    next if /^#/;
+    chomp;
+    my ($service,$url,$tag)=split;
+    if (defined $update{$service}){
+      print "Updating $service\n";
+      $url=$cfg->{services}->{$service}->{giturl};
+      $tag=KBDeploy::gittag($service);
+      print STDERR "Problem with $service\n" unless length($tag)>0;
+    }
+    $out.="$service $url $tag\n";
+  }
+  close TF;
+  open TF,"> $tagfile" or die "Unable to create $tagfile\n";
+  print "Tagfile: $tagfile\n";
+  print TF "# $ds\n";
+  print TF $out;
+  close TF;
+}
+
 sub readhashes {
   my $f=shift;
   open(H,$f);
