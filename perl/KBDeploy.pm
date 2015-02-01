@@ -368,6 +368,9 @@ sub generate_autodeploy{
     if (defined $cfg->{services}->{$s}->{'deploy-service'}){
        push @{$dlist->{'deploy-service'}},split /,/,$cfg->{services}->{$s}->{'deploy-service'};
     }
+    if (defined $cfg->{services}->{$s}->{'deploy-master'}){
+       push @{$dlist->{'deploy'}},split /,/,$cfg->{services}->{$s}->{'deploy-master'};
+    }
   }
   
   $acfg->newval($section,'deploy-master',join ',',@{$dlist->{deploy}}) or die "Unable to set deploy-service";
