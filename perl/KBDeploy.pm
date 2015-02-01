@@ -172,7 +172,7 @@ sub clonetag {
   # get the service name (which may be different than the package name
   my $serv=$reponame2service{$package};
   my $repo=$repo{$package};
-  die "no repo defined for $serv!" unless $repo;
+  die "no repo defined for $package!" unless $repo;
   my $mytag=$cfg->{services}->{$serv}->{hash};
   my $mybranch=$cfg->{services}->{$serv}->{'git-branch'};
 
@@ -367,6 +367,9 @@ sub generate_autodeploy{
     push @{$dlist->{$dt}},$reponame{$s}; 
     if (defined $cfg->{services}->{$s}->{'deploy-service'}){
        push @{$dlist->{'deploy-service'}},split /,/,$cfg->{services}->{$s}->{'deploy-service'};
+    }
+    if (defined $cfg->{services}->{$s}->{'deploy-master'}){
+       push @{$dlist->{'deploy'}},split /,/,$cfg->{services}->{$s}->{'deploy-master'};
     }
   }
   

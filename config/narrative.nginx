@@ -245,7 +245,6 @@ server {
 	location /narrative_shutdown {
 	     default_type 'application/json';
 	     allow 127.0.0.1;
-	     deny all;
 
 	     set $uri_base '/narrative_shutdown';
 	     content_by_lua 'proxymgr:narrative_shutdown()';

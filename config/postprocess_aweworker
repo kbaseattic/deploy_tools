@@ -26,11 +26,12 @@ print "Service: $service\n";
 my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
-$mcfg->newval('Client','group',$cfg->{services}->{$service}->{'group'}) or die "Unable to set group";
+$mcfg->newval('Client','group','replace') or die "Unable to set group";
 $mcfg->newval('Client','clientgroup_token',$cfg->{services}->{$service}->{'token'}) or die "Unable to set token";
 $mcfg->newval('Client','clientgroup_token',"replace");
 $mcfg->newval('Client','serverurl',$cfg->{services}->{$service}->{'serverurl'}) or die "Unable to set serverurl";
 $mcfg->setval('Client','supported_apps','*');
+$mcfg->setval('Client','name','hostname');
 
 my $defaultdone=0;
 foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
