@@ -1,0 +1,46 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use strict;
+
+my $PIC="apt-get install -y";
+my $cfg=read_config();
+
+add_package("python-pip","/usr/bin/pip");
+
+mkdir "/kb" unless -e "/kb";
+KBDeploy::clonetag('bootstrap') unless -e "/kb/bootstrap";
+
+add_package("libcurl4-gnutls-dev","/usr/bin/curl-config");
+add_package("python-dev ncurses-dev","/usr/include/ncurses.h");
+#mysystem("pip install -r bootstrap/kb_python_runtime/python-pip-list-narrative");
+#  mysystem("apt-get install -y python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose") unless -e "/usr/bin/ipython";
+
+
+add_package("python-software-properties","/usr/bin/add-apt-repository");
+if ( ! -e "/usr/sbin/nginx" ){
+    mysystem("echo ''|add-apt-repository ppa:nginx/stable");
+    mysystem("apt-get update ; apt-get install -y nginx");
+}
+
+add_package("lua5.1 luarocks liblua5.1-0 liblua5.1-0-dev liblua5.1-json liblua5.1-lpeg2","/usr/bin/lua5.1");
+if ( ! -e "/usr/local/lib/luarocks/rocks/luasocket" ){
+    mysystem("luarocks install luasocket");
+    mysystem("luarocks install luajson");
+    mysystem("luarocks install penlight");
+    mysystem("luarocks install lua-spore");
+    mysystem("luarocks install luacrypto");
+}
+
+
+
+sub add_package {
+  my $packagelist=shift;
+  my $test=shift;
+
+  return if (defined $test && -e $test);
+  system("$PIC $packagelist");
+
+}

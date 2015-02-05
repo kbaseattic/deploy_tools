@@ -1,6 +1,7 @@
 #!/usr/bin/env perl 
 
-use lib './perl';
+use FindBin;
+use lib "$FindBin::Bin/perl/";
 use Data::Dumper;
 use KBDeploy;
 use KBProvision;
@@ -12,8 +13,8 @@ my $verbose=0;
 my %opt;
 my $dry_run=0;
 my $force;
-my $defcfgfile='cluster.ini';
-my $cfgfile=$defcfgfile;
+my $defcfgfile='/cluster.ini';
+my $cfgfile=$FindBin::Bin.'/'.$defcfgfile;
 getopts('nvfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
 
 $dry_run=1 if (defined $opt{n});
@@ -31,6 +32,9 @@ $_=shift @ARGV;
 if (/mkvm/) {
     update_available();
     configure_vms();
+}
+elsif (/^bootstrap/) {
+    bootstrap(@ARGV);
 }
 elsif (/boot/) {
     KBProvision::boot_nodes($global->{xcatgroup});
@@ -107,6 +111,77 @@ sub configure_vms {
       print "- Configured using $scfg->{host}\n" if $debug>1;
     }
   }
+}
+
+# This will get executed on each node as root during bootstrap
+#
+# TODO: Move into KBDeploy
+# TODO: Create some kind of versioning for bootstrap to detect 
+#       when something is out of sync
+#
+sub bootstrap_local {
+  warn "Bootstraping local host";
+  die "This must run as root." unless $< eq 0;
+
+  # Run bootstrap for the node and any services
+  my @sl=('node');
+
+  # TODO: Support local customization?
+  push @sl,myservices();
+   
+  for my $service (@sl){
+    my $bs="$basedir/local/bootstrap_".$service;
+    if ( -e $bs ){
+      print " - Local Bootstrap $service\n";
+      chmod 0755, $bs;
+      mysystem("cd $basedir/config;$bs");
+    }
+    $bs="$basedir/config/bootstrap_".$service;
+    if ( -e $bs ){
+      print " - Bootstrap $service\n";
+      chmod 0755, $bs;
+      mysystem("cd $basedir/config;$bs");
+    }
+  } 
+  
+}
+#
+# Bootstrap the node
+#
+sub bootstrap {
+   # Push out the scripts
+   my $fl=join " ",@_;
+   my $list=KBDeploy::hostlist();
+   $list=$fl if $fl;
+
+   if ($list eq 'local'){
+     bootstrap_local();
+     return; 
+   }
+   warn "Bootstraping hosts $list";
+   # Move to provisoin
+   my $bi=$cfg->{global}->{'bootstrap-init'};
+   if (defined $bi){
+     KBProvision::bootstrap($list,$bi);
+   }
+   else {
+     warn "bootstrap-init not defined in global section of INI";
+     return;
+   }
+   # Sync up DT so we can use it
+   sync_dt(@_);
+
+   # Copy localized scripts out to nodes
+   my $bl=$cfg->{global}->{'bootstrap-local'};
+   if ( defined $bl && -e $bl ) {
+      my $b=$bl;
+      $b=~s/\/$//;
+      $b=~s/.*\///;
+      mysystem("pdcp -w $list -r $bl $basedir/");
+      mysystem("pdsh -w $list ln -sf $basedir/$b $basedir/local");
+   }
+   # Run the DT bootstrap on each node (see above)
+   KBProvision::bootstrap($list,"$bi $basedir/$0 bootstrap local");
 }
 
 #
