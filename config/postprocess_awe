@@ -8,13 +8,6 @@ use Config::IniFiles;
 use strict;
 
 my %opt;
-my $bootstrap=0;
-
-# Some of these aren't used yet, but may add in the future.
-getopts('b',\%opt);
-$bootstrap=1 if defined $opt{b};
-
-exit if $bootstrap;
 
 my $hashfile;
 $hashfile=shift;
