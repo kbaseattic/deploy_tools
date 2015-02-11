@@ -123,8 +123,9 @@ server {
 	}
 
         location /narrative/ {
-
+ 
              default_type 'text/plain';
+             error_page 401 /index.html;
  
              set $target '';
 
@@ -254,6 +255,7 @@ server {
         location /narrative/ {
 
              default_type 'text/plain';
+             error_page 401 /index.html;
  
              set $target '';
 
