@@ -225,6 +225,10 @@ sub deploy_services{
    elsif (defined $cfg->{services}->{$option}){
      $list=$cfg->{services}->{$option}->{host};
      push @sl,$option;
+     if ($list eq ''){
+       print "$option isn't associated with a host\n";
+       exit;
+     }
      print "Deploy $option on $list\n" if $verbose;
      $remote=1;
    }
