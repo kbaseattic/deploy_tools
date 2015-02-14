@@ -28,7 +28,7 @@ exit if (! defined $hashfile && KBDeploy::is_complete(@sl) && $force);
 #
 # redploy_service will tell us if we need to repeploy but
 # it also populates that hashes to deploy
-my $redeploy=KBDeploy::redeploy_service("../$hashfile",@sl);
+my ($redeploy,@list)=KBDeploy::check_updates("../$hashfile",@sl);
 if (! $redeploy && $force==0){
   print " - No deploy required for $sl[0]\n";
   exit;

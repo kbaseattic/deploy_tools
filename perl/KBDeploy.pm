@@ -17,7 +17,7 @@ use vars  qw(@ISA @EXPORT_OK);
 use base qw(Exporter);
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service deploy_service myservices mkdocs);
+our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service myservices mkdocs);
 
 our $cfg;
 $cfg->{global}->{type}='global';
@@ -53,15 +53,6 @@ our %reponame2service;
 our %reponame;
 our $basedir=$FindBin::Bin;
 $basedir=~s/config$//;
-
-# Defaults and paths
-#my $KB_DC="$KB_BASE/dev_container";
-#my $KB_RT="$KB_BASE/runtime";
-#my $MAKE_OPTIONS=$ENV{"MAKE_OPTIONS"};
-#
-#$KB_DEPLOY=$global->{deploydir} if (defined $global->{deploydir});
-#$KB_DC=$global->{devcontainer} if (defined $global->{devcontainer});
-#$KB_RT=$global->{runtime} if (defined $global->{runtime});
 
 if (-e "$basedir/config/gitssh" ){
   $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
@@ -115,6 +106,7 @@ sub read_config {
 
    my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open $file".$Config::IniFiles::errors[0];
    $cfg->{global}->{repobase}='undefined';
+   $cfg->{global}->{'default-modules'}="kbapi_common,typecomp,jars,auth";
 
    # Read global and default first
    for my $section ('global','defaults'){
@@ -167,6 +159,7 @@ sub mysystem {
 }
 
 # Helper function to clone a module and checkout a tag.
+# Also records the tag that was cloned or checked out
 sub clonetag {
   my $package=shift;
   # get the service name (which may be different than the package name
@@ -180,29 +173,29 @@ sub clonetag {
   $mybranch="master" if ! defined $mybranch; 
   $mytag=$global->{tag} if defined $global->{tag};
   print "  - Cloning $package (tag: $mytag branch:$mybranch)\n";
-  my $dir=$reponame{$package};
-  if ( -e $dir ) {
-    warn "$dir already exists";
-    chdir $dir or die "Unable to cd to $dir";
-    # Make sure we are on head
-    mysystem("git checkout $mybranch  > /dev/null 2>&1");
-    mysystem("git pull  > /dev/null 2>&1");
-    chdir("../");
+  my $rname=$reponame{$package};
+  my $dir=$rname;
+
+  # If the directory exist and matches our tag, then we are happy 
+  if ( -e $dir && defined $cfg->{deployed}->{$rname}){
+    warn "Checking state\n";
+    # Return if the versions are the same
+    return if $cfg->{deployed}->{$rname}->{hash} eq $mytag;
+    print "Deployed version is different.\n";
   }
   else {
     mysystem("git clone --recursive $repo > /dev/null 2>&1");
-# need $dir here?
-    chdir $dir or die "Unable to chdir";
-    mysystem("git checkout $mybranch > /dev/null 2>&1");
-    chdir "../";
+    #chdir $dir or die "Unable to chdir";
+    #mysystem("git checkout $mybranch > /dev/null 2>&1");
+    #chdir "../";
   }
+
   if ( $mytag ne "head" ) {
     chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
   elsif ( $mybranch ne "master" ) {
-    warn "checking out branch $mybranch";
     chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
@@ -210,10 +203,41 @@ sub clonetag {
   # Save the stats
   my $hash=`cd $dir;git log --pretty='%H' -n 1` or die "Unable to get hash\n";
   chomp $hash;
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  open GH,">> $hf" or die "Unable to create $hf\n";
-  print GH "$serv $repo $hash\n";
+  # This will get writen into a hash file
+  $cfg->{deployed}->{$rname}->{hash}=$hash;
+  $cfg->{deployed}->{$rname}->{repo}=$repo;
+}
+
+# Write out githash
+sub write_githash {
+  my $hf=shift;
+  open GH,'>'.$hf or die "Unable to create $hf\n";
+  foreach my $serv (keys %{$cfg->{deployed}}){
+    my $dep=$cfg->{deployed}->{$serv};
+    printf GH "%s %s %s\n",$serv,$dep->{repo},$dep->{hash};
+  }
+  print GH "Done\n";
   close GH;
+}
+
+# Read githash
+sub read_githash {
+  my $hf=shift; 
+
+  if (! open(H,"$hf")){
+    print STDERR "No hash file $hf\n";
+    return 1;
+  }
+
+  while(<H>){
+    return 0 if /Done/;
+    my ($serv,$repo,$hash)=split;
+    $cfg->{deployed}->{$serv}->{hash}=$hash;
+    $cfg->{deployed}->{$serv}->{repo}=$repo;
+  }
+  # Not sure about this
+  delete $cfg->{deployed};
+  return 1;
 }
 
 # Recursively get dependencies
@@ -261,7 +285,8 @@ sub deploy_devcontainer {
   clonetag "dev_container";
   chdir "dev_container/modules";
 
-  for my $pack ("kbapi_common","typecomp","jars","auth" ) {
+  for my $pack (split /,/,$global->{'default-modules'}){
+    next if $pack eq '';
     clonetag $pack;
   }
   chdir("$KB_DC");
@@ -503,39 +528,40 @@ sub readhashes {
   close H;
 }
 
-sub redeploy_service {
+sub check_updates {
   my $tagfile=shift; 
 
   die "Tagfile $tagfile not found" unless -e $tagfile;
   readhashes($tagfile);
+
 # Check hashes
 
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  if (! open(H,"$hf")){
-    print STDERR "No hash file $hf\n";
-    return 1;
-  }
-
-  while(<H>){
-    return 0 if /^Done$/;
-    chomp;
-    my ($s,$url,$hash)=split;
-    if ($url ne $cfg->{services}->{$s}->{giturl}){
+  my $redeploy=read_githash($global->{devcontainer}."/".$global->{hashfile});
+  print "No previous deploy or previous deploy was incomplete\n" if ($redeploy);
+  my @redeploy_list;
+  for my $s (keys %{$cfg->{deployed}}){
+    my $repo=$cfg->{deployed}->{$s}->{repo};
+    my $hash=$cfg->{deployed}->{$s}->{hash};
+    if ($repo ne $cfg->{services}->{$s}->{giturl}){
       print " - Redeploy change in URL for $s\n";
-      return 1;
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
-    if (! defined $cfg->{services}->{$s}->{hash}){
+    elsif (! defined $cfg->{services}->{$s}->{hash}){
       print " - Redeploy no hash for $s\n";
-      return 1;
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
-    if ($hash ne $cfg->{services}->{$s}->{hash}){
+    elsif ($hash ne $cfg->{services}->{$s}->{hash}){
       print " - Redeploy change in hash for $s\n";
-      return 1;
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
   }
  
   # Missing Done flag 
-  return 1;
+  return ($redeploy,@redeploy_list);
+  #return 1;
 }
 
 sub auto_deploy {
@@ -620,6 +646,64 @@ sub deploy_service {
 
 }
 
+#
+# Update service only redeploys modules that have changed
+#
+sub update_service {
+  my $hashfile=shift;
+  my $dryrun=shift;
+
+  my $LOGFILE="/tmp/deploy.log";
+  my $KB_DEPLOY=$global->{deploydir};
+  my $KB_DC=$global->{devcontainer};
+  my $KB_RT=$global->{runtime};
+  my $MAKE_OPTIONS=$global->{'make-options'};
+  my $ad=$KB_DC."/autodeploy.cfg";
+  my @sl=myservices();
+
+  print "Updating @sl with $hashfile\n"; 
+  mkdocs(@sl);
+  # TODO: Should we keep this
+  return if (! defined $hashfile && KBDeploy::is_complete(@sl));
+#
+# redploy_service will tell us if we need to repeploy but
+# it also populates that hashes to deploy
+  my ($reqdep,@redeploy)=check_updates("$hashfile",@sl);
+  if ($reqdep==0){
+    print " - No deploy required for $sl[0]\n";
+    return;
+  }
+
+  if ($dryrun){
+    print " - Redploy needed.  Exiting with dryrun\n";
+    return;
+  }
+
+  stop_service(@sl);
+
+  # Checkout the right versions
+  prepare_service($LOGFILE,$KB_DC,@redeploy);
+
+  # For each service we need to chdir in and do a make
+  print "  - Running make on updated modules\n";
+  foreach my $s (@redeploy){
+    my $rname=$reponame{$s};
+    chdir $KB_DC."/modules/".$s;
+    mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
+  }
+  print "  - Running autodeploy\n";
+  chdir $KB_DC;
+  foreach my $s (@redeploy){
+    my $rname=$reponame{$s};
+    mysystem(". $KB_DC/user-env.sh;perl auto-deploy --module $rname $ad >> $LOGFILE 2>&1");
+  }
+  #postprocess($s);
+
+  start_service(@sl);
+
+  mark_complete(@sl);
+}
+
 sub postprocess {
   my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$global->{deploydir};
@@ -664,10 +748,7 @@ sub mark_complete {
   my @services=@_;
   print 'Services deployed successfully: ' . join ', ', @services;
   print "\n";
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  open GH,">> $hf" or die "Unable to create $hf\n";
-  print GH "Done\n";
-  close GH;
+  write_githash($global->{devcontainer}."/".$global->{hashfile});
 }
 
 # Use this to determine if a node is already finished
