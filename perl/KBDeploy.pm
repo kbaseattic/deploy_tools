@@ -20,10 +20,10 @@ our @ISA    = qw(Exporter);
 our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service myservices mkdocs);
 
 our $cfg;
-$cfg->{global}->{type}='global';
-$cfg->{defaults}->{type}='defaults';
-our $global=$cfg->{global};
-our $defaults=$cfg->{defaults};
+#$cfg->{global}->{type}='global';
+#$cfg->{defaults}->{type}='defaults';
+our $global; #=$cfg->{global};
+our $defaults; #=$cfg->{defaults};
 
 our $cfgfile;
 
@@ -54,6 +54,7 @@ our %reponame;
 our $basedir=$FindBin::Bin;
 $basedir=~s/config$//;
 
+# TODO: Move this
 if (-e "$basedir/config/gitssh" ){
   $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
 }
@@ -105,8 +106,19 @@ sub read_config {
    $cfgfile=$file if defined $file;
 
    my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open $file".$Config::IniFiles::errors[0];
-   $cfg->{global}->{repobase}='undefined';
-   $cfg->{global}->{'default-modules'}="kbapi_common,typecomp,jars,auth";
+
+   # Reset things
+   undef $cfg;
+   $cfg->{global}->{type}='global';
+   $cfg->{defaults}->{type}='defaults';
+   $global=$cfg->{global};
+   $defaults=$cfg->{defaults};
+   $global->{repobase}="undefined";
+   $global->{basename}="bogus";
+   $global->{hashfile}="githashes";
+   $global->{runtime}="/usr";
+   $global->{'make-options'}="";
+   $global->{'default-modules'}="kbapi_common,typecomp,jars,auth";
 
    # Read global and default first
    for my $section ('global','defaults'){
@@ -293,7 +305,9 @@ sub deploy_devcontainer {
   mysystem("./bootstrap $KB_RT");
 
   # Fix up setup
-  mysystem("$basedir/config/fixup_dc");
+  if (-e "$basedir/config/fixup_dc"){
+    mysystem("$basedir/config/fixup_dc");
+  }
 
   print "Running Make in dev_container\n";
   mysystem(". ./user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
@@ -464,19 +478,32 @@ sub mkhashfile {
     $tagfile="tagfile.$ds";
   }
   my $out;
+  my %hashes;
   for my $service (keys %{$cfg->{services}}){
     my $s=$cfg->{services}->{$service};
     next if $s->{giturl} eq 'none';
     my $tag=KBDeploy::gittag($service);
-    print STDERR "Problem with $service\n" unless length($tag)>0;
+    my $rname=$reponame{$service};
+    if (length $tag eq 0){
+      print STDERR "Failed to get tag for $service\n";
+      return 0;
+    }
+    if (defined $hashes{$rname} && $tag ne $hashes{$rname}){
+      print STDERR "You have two services that map to the same reponame,\n";
+      print STDERR "yet result in different hashes. Please correct.\n";
+      print STDERR "Failing mkhashfile.\n";
+      return 0;
+    }
+    $hashes{$rname}=$tag;
 
     $out.="$service $s->{giturl} $tag\n";
   }
   open TF,"> $tagfile" or die "Unable to create $tagfile\n";
-  print "Tagfile: $tagfile\n";
+  #print "Tagfile: $tagfile\n";
   print TF "# $ds\n";
   print TF $out;
   close TF;
+  return 1;
 }
 
 #
@@ -629,7 +656,10 @@ sub deploy_service {
   print "Starting bootstrap $KB_DC\n";
   mysystem("./bootstrap $KB_RT");
   # Fix up setup
-  mysystem("$basedir/config/fixup_dc");
+
+  if (-e "$basedir/config/fixup_dc" ){
+    mysystem("$basedir/config/fixup_dc");
+  }
 
   if ( ! -e $KB_DEPLOY ){
     mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";

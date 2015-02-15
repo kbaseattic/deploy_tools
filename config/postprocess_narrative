@@ -135,5 +135,8 @@ if (defined $scfg->{logging}){
 # This kills off the old provisioned containers to pick up fresh ones
 mysystem("curl -k -X DELETE https://localhost/proxy_map/provisioned || echo Ignore error");
 
+# Test this out
+print `sudo /etc/init.d/nginx reload`;
+
 KBDeploy::mark_complete('narrative',@sl);
 
