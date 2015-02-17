@@ -104,6 +104,15 @@ server {
 
 	}
 
+        location /narrative_shutdown {
+             allow 127.0.0.1;
+             default_type 'application/json';
+
+             set $uri_base '/proxy_map';
+             content_by_lua 'proxymgr:narrative_shutdown()';
+
+        }
+
 	# Statically bound workspace1 instance for Paramvir
 	location /workspace1 {
              default_type 'text/plain';
@@ -125,6 +134,7 @@ server {
         location /narrative/ {
 
              default_type 'text/plain';
+             error_page 401 /index.html;
  
              set $target '';
 
@@ -254,6 +264,7 @@ server {
         location /narrative/ {
 
              default_type 'text/plain';
+             error_page 401 /index.html;
  
              set $target '';
 
