@@ -150,7 +150,9 @@ sub read_config {
          $cfg->{$section}->{$_}=$mcfg->val($section,$_);
        }
    }
-   # Could use the tie option, but let's build it up ourselves
+   # Trim off trailing slash to avoid bogus mismatches
+   $global->{repobase}=~s/\/$//;
+   
    
    for my $section ($mcfg->Sections()){
      next if ($section eq 'global' || $section eq 'defaults');
@@ -167,6 +169,7 @@ sub read_config {
      foreach ($mcfg->Parameters($section)){
        $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
      }
+     $cfg->{services}->{$section}->{giturl}=cleanup_url($cfg->{services}->{$section}->{giturl});
      push @{$cfg->{servicelist}},$section if ( $cfg->{services}->{$section}->{type} eq 'service');
    }
    maprepos();
@@ -270,6 +273,7 @@ sub read_githash {
   while(<H>){
     return 0 if /Done/;
     my ($serv,$repo,$hash)=split;
+    $repo=cleanup_url($repo);
     $cfg->{deployed}->{$serv}->{hash}=$hash;
     $cfg->{deployed}->{$serv}->{repo}=$repo;
   }
@@ -568,6 +572,7 @@ sub readhashes {
     next if /^#/;
     chomp;
     my ($s,$url,$hash)=split;
+    $url=cleanup_url($url);
     my $confurl=$cfg->{services}->{$s}->{giturl};
     $confurl="undefined" if ! defined $confurl;
     print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
@@ -825,6 +830,14 @@ sub is_complete {
 sub reset_complete {
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
   rename $hf,$hf.'.old';
+}
+
+# Remove double slashes
+#
+sub cleanup_url {
+  my $url=shift; 
+  $url=~s/([^:\/])\/\/([a-zA-Z])/$1\/$2/;
+  return $url;
 }
 
 1;
