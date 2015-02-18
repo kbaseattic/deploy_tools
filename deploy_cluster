@@ -280,6 +280,10 @@ sub deploy_services{
          print " - Running: $script $opts $hashfile\n" if $verbose;
          KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/config;./$script $opts $hashfile");
        }
+       elsif (! $update || $script eq 'setup_service'){
+         print " - Running: $0 $opts deploy local $hashfile\n" if $verbose;
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts local deploy $hashfile");
+       }
        else{
          print " - Running: $0 $opts update local $hashfile\n" if $verbose;
          # TODO: replace with a module call
@@ -293,7 +297,13 @@ sub deploy_services{
        if ($update eq 0){
          my $script=$cfg->{services}->{$service}->{setup};
          # TODO: replace with a module call
-         mysystem("cd $basedir/config;./$script $opts $hashfile");
+         if ($script eq 'setup_service'){
+           print " - Running built-in deploy_service\n";
+           KBDeploy::deploy_service($hashfile,$dry_run,$force);
+         }
+         else{
+           mysystem("cd $basedir/config;./$script $opts $hashfile");
+         }
        }
        else{
          KBDeploy::update_service($hashfile,$dry_run);
