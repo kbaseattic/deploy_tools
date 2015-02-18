@@ -221,13 +221,15 @@ ok(-e $dc.'/'.$ad);
 # stop_service
 # test_service
 # prepare_service
-# check_updates
+
+
+
 # auto_deploy
 
 open(TF,"> $tf");
 print TF "# 201502131300\n";
-print TF "kbtestserv file:///Users/canon/Dev/gits//kbtestserv 72715ad6d2fa474dd70417a663a4a7f328eb3fe4\n";
-print TF "dev_container file:///Users/canon/Dev/gits//dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
+print TF "kbtestserv $repobase/kbtestserv 72715ad6d2fa474dd70417a663a4a7f328eb3fe4\n";
+print TF "dev_container $repobase/dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
 close TF;
 
 # deploy_service
@@ -250,8 +252,8 @@ ok($cfg->{services}->{$testrepo}->{hash},'72715ad6d2fa474dd70417a663a4a7f328eb3f
 #
 open(TF,"> $tf");
 print TF "# 201502130827\n";
-print TF "kbtestserv file:///Users/canon/Dev/gits//kbtestserv 82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567\n";
-print TF "dev_container file:///Users/canon/Dev/gits//dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
+print TF "kbtestserv $repobase/kbtestserv 82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567\n";
+print TF "dev_container $repobase/dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
 close TF;
 sleep 1;
 print "# run update, but something has changed\n";
@@ -259,6 +261,43 @@ delete $cfg->{deployed};
 ok(KBDeploy::update_service($tf,0),0);
 ok(defined $cfg->{deployed}->{$testrepo});
 ok($cfg->{deployed}->{$testrepo}->{hash},'82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567');
+
+#
+# check_updates
+#
+print "# Test check_updates\n";
+
+# Catch case where service name doesn't match repo name
+open(C,"> $cf");
+print C "[global]\n";
+print C "devcontainer=$dc\n";
+print C "repobase=$repobase\n";
+print C "[defaults]\n\n";
+print C "[dev_container]\n";
+print C "type=lib\n";
+print C "[bogus]\n";
+print C "type=service\n";
+print C "giturl=".$repobase."/$testrepo\n";
+close C;
+$cfg=KBDeploy::read_config($cf);
+
+# Something changed
+open(TF,"> $tf");
+print TF "bogus $repobase/$testrepo 72715ad6d2fa474dd70417a663a4a7f328eb3fe4\n";
+print TF "dev_container $repobase/dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
+close TF;
+my ($status,@list)=KBDeploy::check_updates($tf);
+ok($status,1);
+ok($list[0],'bogus');
+
+# Something unchanged
+open(TF,"> $tf");
+print TF "bogus $repobase/$testrepo 82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567\n";
+print TF "dev_container $repobase/dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
+close TF;
+($status,@list)=KBDeploy::check_updates($tf);
+ok($status,0);
+
 
 
 # postprocess
@@ -269,7 +308,7 @@ ok($cfg->{deployed}->{$testrepo}->{hash},'82e4ae592542cdeb76fa32bfebe7f3b7cf6d65
 
 # Write test for fastupdate
 
-
+exit;
 # Cleanup
 unlink($cf);
 unlink($tf);

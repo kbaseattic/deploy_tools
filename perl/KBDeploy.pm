@@ -77,6 +77,9 @@ sub kblog {
 }
 
 sub maprepos {
+  undef %repo;
+  undef %reponame;
+  undef %reponame2service;
   for my $s (keys %{$cfg->{services}}){
   #
     $repo{$s}=$cfg->{services}->{$s}->{giturl};
@@ -568,13 +571,19 @@ sub readhashes {
     my $confurl=$cfg->{services}->{$s}->{giturl};
     $confurl="undefined" if ! defined $confurl;
     print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
-    print STDERR "Warning: $confurl vs $url\n" if $confurl ne $url;
+    print STDERR "Warning: $confurl(config file) vs $url(tag file)\n" if $confurl ne $url;
     $cfg->{services}->{$s}->{hash}=$hash;
     $cfg->{services}->{$s}->{giturl}=$url;
   }
   close H;
 }
 
+#
+# check_updates
+#  Returns status and a list
+#  status=1 if redeploy need and 0 if not
+#  list is list of services that changed
+#
 sub check_updates {
   my $tagfile=shift; 
 
@@ -586,9 +595,12 @@ sub check_updates {
   my $redeploy=read_githash($global->{devcontainer}."/".$global->{hashfile});
   kblog "No previous deploy or previous deploy was incomplete\n" if ($redeploy);
   my @redeploy_list;
-  for my $s (keys %{$cfg->{deployed}}){
-    my $repo=$cfg->{deployed}->{$s}->{repo};
-    my $hash=$cfg->{deployed}->{$s}->{hash};
+  for my $r (keys %{$cfg->{deployed}}){
+    my $repo=$cfg->{deployed}->{$r}->{repo};
+    my $hash=$cfg->{deployed}->{$r}->{hash};
+    my $s=$r;
+    $s=$reponame2service{$r} if ! defined $cfg->{services}->{$s}->{giturl};
+    die "Error: couldn't find a matching service for $s\n" if ! defined $cfg->{services}->{$s}->{giturl};
     if ($repo ne $cfg->{services}->{$s}->{giturl}){
       kblog " - Redeploy change in URL for $s\n";
       push @redeploy_list,$s;
@@ -756,7 +768,7 @@ sub postprocess {
   my $KB_RT=$global->{runtime};
   $ENV{'KB_CONFIG'}=$cfgfile;
   for my $serv (@_) {
-      print STDERR "postprocessing service $serv ${FindBin::Bin}/config/postprocess_$serv\n";
+    print STDERR "postprocessing service $serv ${FindBin::Bin}/config/postprocess_$serv\n";
     if (-e "${FindBin::Bin}/config/postprocess_$serv") {
       kblog "postprocessing service $serv";
       mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/config/postprocess_$serv >> $LOGFILE 2>&1");
