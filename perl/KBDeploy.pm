@@ -332,7 +332,7 @@ sub deploy_devcontainer {
     clonetag $pack;
   }
   chdir("$KB_DC");
-  mysystem("./bootstrap $KB_RT");
+  mysystem("./bootstrap $KB_RT >> $LOGFILE 2>&1");
 
   # Fix up setup
   if (-e "$basedir/config/fixup_dc"){
@@ -575,8 +575,8 @@ sub readhashes {
     $url=cleanup_url($url);
     my $confurl=$cfg->{services}->{$s}->{giturl};
     $confurl="undefined" if ! defined $confurl;
-    print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
-    print STDERR "Warning: $confurl(config file) vs $url(tag file)\n" if $confurl ne $url;
+    kblog "Warning: different git url for service $s\n" if $confurl ne $url;
+    kblog "Warning: $confurl(config file) vs $url(tag file)\n" if $confurl ne $url;
     $cfg->{services}->{$s}->{hash}=$hash;
     $cfg->{services}->{$s}->{giturl}=$url;
   }
@@ -651,7 +651,7 @@ sub auto_deploy {
   chdir("$KB_DC");
 
   kblog "Starting bootstrap $KB_DC\n";
-  mysystem("./bootstrap $KB_RT");
+  mysystem("./bootstrap $KB_RT >> $LOGFILE 2>&1");
 
   kblog "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
@@ -769,15 +769,11 @@ sub update_service {
 sub postprocess {
   my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$global->{deploydir};
-  my $KB_DC=$global->{devcontainer};
-  my $KB_RT=$global->{runtime};
   $ENV{'KB_CONFIG'}=$cfgfile;
   for my $serv (@_) {
-    print STDERR "postprocessing service $serv ${FindBin::Bin}/config/postprocess_$serv\n";
     if (-e "${FindBin::Bin}/config/postprocess_$serv") {
       kblog "postprocessing service $serv";
       mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/config/postprocess_$serv >> $LOGFILE 2>&1");
-#      stop_service($serv);
     }
   }
 
@@ -798,9 +794,11 @@ sub gittag {
 
 sub mkdocs {
   my $KB_DEPLOY=$global->{deploydir};
+  my $docbase=$global->{docbase};
+  return if ! defined $docbase;
   for my $s (@_){
     my $bd=$cfg->{services}->{$s}->{basedir};
-    symlink $KB_DEPLOY."/services/$bd/webroot","/var/www/$bd";
+    symlink $KB_DEPLOY."/services/$bd/webroot","$docbase/$bd";
   } 
 }
 

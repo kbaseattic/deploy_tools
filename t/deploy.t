@@ -28,6 +28,7 @@ my $tf="$base/tf.$$.out";
 my $cf="$base/test.$$.ini";
 my $ad="autodeploy.cfg";
 my $lf="$base/dep.$$.log";
+my $dc=$base."/dev_container";
 
 print "# Test output is in $base\n";
 
@@ -133,7 +134,6 @@ ok(-e "$tf",undef);
 #
 # Duplicate that is okay
 #
-my $dc=$base."/dev_container";
 open(C,"> $cf");
 print C "[global]\n";
 print C "repobase=$repobase\n";
@@ -203,6 +203,19 @@ ok(! -e $dc."/".$cfg->{global}->{hashfile});
 ok(KBDeploy::is_complete(),0);
 
 `rm -rf $base/$testrepo`;
+
+# getdeps
+print "# Test getdeps\n";
+delete $cfg->{deployed};
+`rm -rf $dc/modules/$testrepo`;
+mkdir "$dc/modules";
+mkdir "$dc/modules/myrepo";
+open(D,"> $dc/modules/myrepo/DEPENDENCIES");
+print D "$testrepo\n";
+close D;
+chdir($dc."/modules");
+KBDeploy::getdeps('myrepo');
+ok(-d "$dc/modules/$testrepo");
 `rm -rf $dc`;
 
 KBDeploy::deploy_devcontainer($lf);
@@ -216,10 +229,10 @@ ok(-e $dc.'/'.$ad);
 
 
 
-# getdeps
 # start_service
 # stop_service
 # test_service
+
 # prepare_service
 
 
@@ -272,6 +285,8 @@ open(C,"> $cf");
 print C "[global]\n";
 print C "devcontainer=$dc\n";
 print C "repobase=$repobase\n";
+print C "deploydir=$base/deployment\n";
+print C "docbase=$base/web\n";
 print C "[defaults]\n\n";
 print C "[dev_container]\n";
 print C "type=lib\n";
@@ -301,14 +316,20 @@ ok($status,0);
 
 
 # postprocess
+unlink("$base/deployment/kbtestserv.log");
+KBDeploy::postprocess('kbtestserv');
+print "# Test for $base/deployment/kbtestserv.log\n";
+ok(-e "$base/deployment/kbtestserv.log");
+
 # mkdocs
+mkdir "$base/web";
+mkdocs("bogus");
+ok(-l "$base/web/bogus");
 
 
-# Test running post process in fastupdate mode
+# TODO: Test running post process in fastupdate mode
 
-# Write test for fastupdate
 
-exit;
 # Cleanup
 unlink($cf);
 unlink($tf);
