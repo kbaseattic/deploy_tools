@@ -9,6 +9,8 @@ my $version="20150204.3";
 my $vf="/.kb_bootstrap";
 my $PIC="apt-get install -y";
 
+
+
 # Check version file
 if (-e $vf){
   open(V,$vf);
@@ -19,6 +21,7 @@ if (-e $vf){
     exit;
   }
 }
+
 
 # Format and mount in /vdb as data
 # TODO: Maybe make these options?
@@ -49,7 +52,11 @@ if ( -e $dev ){
 mkdir "/kb" unless -e "/kb";
 
 # TODO: Some type of package list.  Could use kb_bootstrap too.
-add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip");
+system("apt-get update");
+add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip libdb5.1");
+add_package("apache2");
+
+system("sed -i 's/yes/no/' /etc/xinetd.d/check_mk;/etc/init.d/xinetd restart");
 
 # Write version tag out
 open(V,"> $vf");
