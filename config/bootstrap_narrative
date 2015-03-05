@@ -15,14 +15,16 @@ KBDeploy::clonetag('bootstrap') unless -e "/kb/bootstrap";
 
 add_package("libcurl4-gnutls-dev","/usr/bin/curl-config");
 add_package("python-dev ncurses-dev","/usr/include/ncurses.h");
+add_package("docker.io","/usr/bin/docker");
 #mysystem("pip install -r bootstrap/kb_python_runtime/python-pip-list-narrative");
 #  mysystem("apt-get install -y python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose") unless -e "/usr/bin/ipython";
 
 
 add_package("python-software-properties","/usr/bin/add-apt-repository");
+add_package("software-properties-common","/usr/bin/add-apt-repository");
 if ( ! -e "/usr/sbin/nginx" ){
     mysystem("echo ''|add-apt-repository ppa:nginx/stable");
-    mysystem("apt-get update ; apt-get install -y nginx");
+    mysystem("apt-get update ; apt-get install -y nginx nginx-extras");
 }
 
 add_package("lua5.1 luarocks liblua5.1-0 liblua5.1-0-dev liblua5.1-json liblua5.1-lpeg2","/usr/bin/lua5.1");
@@ -33,7 +35,12 @@ if ( ! -e "/usr/local/lib/luarocks/rocks/luasocket" ){
     mysystem("luarocks install lua-spore");
     mysystem("luarocks install luacrypto");
 }
+add_package("nodejs-dev npm nodejs-legacy","/usr/bin/node");
+mysystem("npm install -g grunt-cli");
 
+mysystem("usermod www-data -G docker");
+mysystem("restart docker.io");
+mysystem("/etc/init.d/apache2 stop");
 
 
 sub add_package {
@@ -44,3 +51,7 @@ sub add_package {
   system("$PIC $packagelist");
 
 }
+
+# TODO 
+# Fix resolv.conf
+
