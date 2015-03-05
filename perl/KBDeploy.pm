@@ -203,7 +203,7 @@ sub clonetag {
   my $package=shift;
   # get the service name (which may be different than the package name
   my $serv=$package;
-  $serv=$reponame2service{$package} if ! defined $serv;
+  $serv=$reponame2service{$package};# if ! defined $serv;
   my $repo=$repo{$package};
   die "no repo defined for $package!" unless $repo;
   my $mytag=$cfg->{services}->{$serv}->{hash};
@@ -639,6 +639,8 @@ sub auto_deploy {
   my $d=`date +%s`;
   chomp $d;
   rename($KB_DEPLOY,"$KB_DEPLOY.$d") if -e $KB_DEPLOY;
+  # Cleanup deployed structure
+  undef $cfg->{deployed};
   mysystem("rm -rf $KB_DC") if (-e $KB_DC);
 
   # Empty log file
@@ -747,7 +749,7 @@ sub update_service {
   kblog "  - Running make on updated modules\n";
   foreach my $s (@redeploy){
     my $rname=$reponame{$s};
-    chdir $KB_DC."/modules/".$s;
+    chdir $KB_DC."/modules/".$rname;
     mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
   }
   kblog "  - Running autodeploy\n";
@@ -756,7 +758,7 @@ sub update_service {
     my $rname=$reponame{$s};
     mysystem(". $KB_DC/user-env.sh;perl auto-deploy --module $rname $ad >> $LOGFILE 2>&1");
   }
-  foreach my $s (@redeploy){
+  foreach my $s (@sl){
     postprocess($s);
   }
 

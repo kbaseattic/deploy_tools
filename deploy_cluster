@@ -276,13 +276,13 @@ sub deploy_services{
          next;
        }
        my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
-       if (! $update || $script ne 'setup_service'){
+       if ( $script ne 'setup_service'){
          print " - Running: $script $opts $hashfile\n" if $verbose;
          KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/config;./$script $opts $hashfile");
        }
-       elsif (! $update || $script eq 'setup_service'){
+       elsif (! $update && $script eq 'setup_service'){
          print " - Running: $0 $opts deploy local $hashfile\n" if $verbose;
-         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts local deploy $hashfile");
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts deploy local $hashfile");
        }
        else{
          print " - Running: $0 $opts update local $hashfile\n" if $verbose;

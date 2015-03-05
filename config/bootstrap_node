@@ -22,6 +22,7 @@ if (-e $vf){
   }
 }
 
+system("apt-get update");
 
 # Format and mount in /vdb as data
 # TODO: Maybe make these options?
@@ -52,7 +53,6 @@ if ( -e $dev ){
 mkdir "/kb" unless -e "/kb";
 
 # TODO: Some type of package list.  Could use kb_bootstrap too.
-system("apt-get update");
 add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip libdb5.1");
 add_package("apache2");
 
