@@ -2,4 +2,6 @@ language: perl
 perl:
   - "5.20"
 
+install: "echo skip"
+
 script: "make test"
