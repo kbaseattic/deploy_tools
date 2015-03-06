@@ -2,6 +2,6 @@ language: perl
 perl:
   - "5.20"
 
-install: "echo skip"
+install: "cpan install Config::simple;cpan install Graph"
 
 script: "make test"

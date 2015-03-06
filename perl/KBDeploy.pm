@@ -204,6 +204,12 @@ sub clonetag {
   # get the service name (which may be different than the package name
   my $serv=$package;
   $serv=$reponame2service{$package};# if ! defined $serv;
+  # Workaround.  Need to restructure where hash/URLs are stored
+  #
+  if (! defined $cfg->{services}->{$serv}->{hash} && 
+        defined $cfg->{services}->{$package}->{hash}){
+    $serv=$package;
+  }
   my $repo=$repo{$package};
   die "no repo defined for $package!" unless $repo;
   my $mytag=$cfg->{services}->{$serv}->{hash};
