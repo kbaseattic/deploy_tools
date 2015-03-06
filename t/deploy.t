@@ -13,7 +13,8 @@ my $testrepo2="kbtestserv2";
 my $repohash="e7a535fe68b2dc8c0508440800bc1784a4a4ff0c";
 
 #my $kbrt="/Applications/KBase.app/runtime/";
-my $kbrt=$FindBin::Bin;
+my $kbrt="/usr";
+$kbrt=$ENV{KB_RUNTIME} if defined $ENV{KB_RUNTIME};
 
 my $hostname=`hostname`;
 chomp $hostname;
@@ -269,9 +270,10 @@ ok($cfg->{services}->{$testrepo}->{hash},$hash);
 #
 # update_service
 #
+$hash="82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567";
 open(TF,"> $tf");
 print TF "# 201502130827\n";
-print TF "kbtestserv $repobase/kbtestserv 82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567\n";
+print TF "kbtestserv $repobase/kbtestserv $hash\n";
 print TF "dev_container $repobase/dev_container 22dd0d96f9c1b96ca9ec318972c52eb70ff3d0c3\n";
 close TF;
 sleep 1;
@@ -279,7 +281,7 @@ print "# run update, but something has changed\n";
 delete $cfg->{deployed};
 ok(KBDeploy::update_service($tf,0),0);
 ok(defined $cfg->{deployed}->{$testrepo});
-ok($cfg->{deployed}->{$testrepo}->{hash},'82e4ae592542cdeb76fa32bfebe7f3b7cf6d6567');
+ok($cfg->{deployed}->{$testrepo}->{hash},$hash);
 
 #
 # check_updates
