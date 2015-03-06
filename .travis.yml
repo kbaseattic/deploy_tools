@@ -4,3 +4,5 @@ perl:
 
 
 script: "make test"
+
+after_failure: "cat /tmp/dc*/dep*log"
