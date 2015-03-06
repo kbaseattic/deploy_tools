@@ -1,2 +1,2 @@
-requires 'Config::Simple'
-requires 'Graph'
+requires 'Config::Simple';
+requires 'Graph';
