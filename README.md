@@ -1,6 +1,8 @@
 
 ## Module Parameters
 
+[![Join the chat at https://gitter.im/kbase/deploy_tools](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/kbase/deploy_tools?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 These are parameters used by deploy_cluster.  These augment the parameters that may be used within the services or by other tools.
 
 - auto-deploy-target - The Makefile target that should be used to deploy this service.
