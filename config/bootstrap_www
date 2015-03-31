@@ -7,6 +7,7 @@ use strict;
 
 
   mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
+  mysystem("apt-get install -y software-properties-common");
   system("dpkg -l |grep -c  python-software-properties > /dev/null");
   mysystem("apt-get -y install python-software-properties") unless $? eq 0;
 

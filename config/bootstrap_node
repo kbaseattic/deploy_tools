@@ -53,7 +53,7 @@ if ( -e $dev ){
 mkdir "/kb" unless -e "/kb";
 
 # TODO: Some type of package list.  Could use kb_bootstrap too.
-add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip libdb5.1");
+add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip libdb5.1 libgd-dev");
 add_package("apache2");
 
 system("sed -i 's/yes/no/' /etc/xinetd.d/check_mk;/etc/init.d/xinetd restart");

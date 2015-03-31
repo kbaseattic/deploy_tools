@@ -20,7 +20,6 @@ if ( -e "/data/bootstrapped" ) {
   print "Already Bootstrapped\n";
   exit;
 }
-exit;
 
   # Add repo
   if (! -e "/etc/apt/sources.list.d/mongodb.list" ){
@@ -28,13 +27,14 @@ exit;
   }
   # Install Mongo
   if (! -e "/usr/bin/mongo" ){
-    mysystem("apt-get update","apt-get -y install mongodb-org mongodb-org-server");
+    mysystem("apt-get update","apt-get -y install mongodb-org=2.6.7 mongodb-org-server=2.6.7");
   }
+exit;
 
   # Copy config files
   mysystem("cp mongo.conf /etc/mongod.conf");
   # Keyfile
-  mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
+  #mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
   mkdir "/data/mongodb" unless -e '/data/mongodb';
   mysystem("chown mongodb /data/mongodb");
 
