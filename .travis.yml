@@ -3,6 +3,6 @@ perl:
   - "5.20"
 
 
-script: "make test"
+script: "printenv;make test"
 
-after_failure: "find /tmp;cat /tmp/dc*/dep*log"
+after_failure: "cat /tmp/dc*/dep*log"
