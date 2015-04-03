@@ -3,6 +3,6 @@ perl:
   - "5.20"
 
 
-script: "printenv;make test"
+script: "printenv;PERL5LIB=$PERLBREW_ROOT/perls/$PERLBREW_PERL/lib/$PERLBREW_PERL:$PERL5LIB make test"
 
-after_failure: "cat /tmp/dc*/dep*log"
+after_failure: "cat /tmp/dc*/dep*log;find $PERLBREW_ROOT"
