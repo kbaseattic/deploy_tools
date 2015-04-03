@@ -3,6 +3,6 @@ perl:
   - "5.20"
 
 
-script: "make test"
+script: "make KB_RUNTIME=$PERLBREW_ROOT/perls/$PERLBREW_PERL test"
 
 after_failure: "cat /tmp/dc*/dep*log"

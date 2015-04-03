@@ -1,0 +1,16 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../../perl/";
+use KBDeploy;
+use strict;
+
+print STDER "$ENV{KB_CONFIG}\n";
+my $cfg=read_config($ENV{KB_CONFIG});
+
+my $DEPLOY=$cfg->{'global'}->{deploydir};
+
+print STDERR "PP: $DEPLOY\n";
+open(D,"> $DEPLOY/kbtestserv.log") or die "Unable to open $DEPLOY/kbtestserv.log";
+print D "Yes!\n";
+close D;
