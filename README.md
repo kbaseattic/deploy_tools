@@ -1,3 +1,6 @@
+### Deploy Tools  [![Build Status](https://travis-ci.org/kbase/deploy_tools.svg?branch=master)](https://travis-ci.org/kbase/deploy_tools)
+
+This repo contains tools to aid in the deployment of KBase software.  The main script is deploy_cluster.  It reads a config file which is typically named cluster.ini.  The remainder of this readme describes the configuration file.
 
 ## Module Parameters
 
