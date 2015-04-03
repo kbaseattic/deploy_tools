@@ -146,6 +146,7 @@ print C "repobase=$repobase\n";
 print C "devcontainer=$dc\n";
 print C "default-modules=\n";
 print C "deploydir=$base/deployment\n";
+print C "make-options=DEPLOY_RUNTIME=\$KB_RUNTIME ANT_HOME=\$KB_RUNTIME/ant TARGET=$base/deployment\n";
 print C "runtime=$kbrt\n";
 print C "[dev_container]\n";
 print C "type=lib\n";
@@ -258,7 +259,7 @@ ok(KBDeploy::deploy_service($tf,0,1),0);
 ok(defined $cfg->{deployed}->{$testrepo});
 ok($cfg->{deployed}->{$testrepo}->{hash},$hash);
 ok($cfg->{services}->{$testrepo}->{hash},$hash);
-ok(-e "$base/deployment/kbtestserv.log");
+ok(-e "$base/deployment/kbtestserv.log") or exit;
 
 # update without a change
 print "# run update, but nothing has changed\n";
