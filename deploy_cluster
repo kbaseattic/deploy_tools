@@ -12,7 +12,7 @@ my $debug=0;
 my $verbose=0;
 my %opt;
 my $dry_run=0;
-my $force;
+my $force=0;
 my $defcfgfile='/cluster.ini';
 my $cfgfile=$FindBin::Bin.'/'.$defcfgfile;
 getopts('nvfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
@@ -43,7 +43,10 @@ elsif (/syncdt/) {
     sync_dt(@ARGV);
 }
 elsif (/^deploy/) {
-    deploy_services(@ARGV);
+    deploy_services(0,@ARGV);
+}
+elsif (/^update$/) {
+    deploy_services(1,@ARGV);
 }
 elsif (/updatehostassignments/) {
      update_available();
@@ -206,6 +209,7 @@ sub sync_dt {
 # Deploy service
 #
 sub deploy_services{
+   my $update=shift;
    my $option=shift;
    my $hashfile;
    my $remote=0;
@@ -215,7 +219,9 @@ sub deploy_services{
    my $opts='';
    $opts.=' -n' if $dry_run;
    $opts.=' -f' if $force;
+   $opts.=' -v' if $verbose;
 
+   # Figure out where what we are deploying and where
    if ($option eq 'all'){
      print "Deploy All\n" if $verbose;
      $list=KBDeploy::hostlist();
@@ -239,6 +245,8 @@ sub deploy_services{
      print "Local Deploy\n" if $verbose;
      unshift @_,$option;
    }
+
+   # Get the hashfile
    $hashfile=shift;
    if (defined $hashfile){
      if (! -e $hashfile){
@@ -251,7 +259,7 @@ sub deploy_services{
    }
    
    if ($remote){
-     update_available();
+     #update_available();
      if (defined $hashfile){
        KBProvision::sync_files($list,$basedir,$hashfile);
        # Remove path stuff
@@ -260,23 +268,46 @@ sub deploy_services{
      }
      KBProvision::sync_file($list,$basedir,$cfgfile,$defcfgfile);
    
-     #Now run the local scripts
+     #Now run the setup scripts
      for my $service (@sl){
-       my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
        print "$service:\n";
        if (defined $cfg->{services}->{$service}->{skipdeploy}){
          print " - Skipping: skipdeploy set.\n" if $verbose;
          next;
        }
-       print " - Running: $script $opts $hashfile\n" if $verbose;
-       mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $opts $hashfile'");
+       my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
+       if ( $script ne 'setup_service'){
+         print " - Running: $script $opts $hashfile\n" if $verbose;
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/config;./$script $opts $hashfile");
+       }
+       elsif (! $update && $script eq 'setup_service'){
+         print " - Running: $0 $opts deploy local $hashfile\n" if $verbose;
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts deploy local $hashfile");
+       }
+       else{
+         print " - Running: $0 $opts update local $hashfile\n" if $verbose;
+         # TODO: replace with a module call
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts update local $hashfile");
+       }
      }
    }
    else{
      @sl=myservices();
      for my $service (@sl){
-        my $script=$cfg->{services}->{$service}->{setup};
-        mysystem("cd $basedir/config;./$script $opts $hashfile");
+       if ($update eq 0){
+         my $script=$cfg->{services}->{$service}->{setup};
+         # TODO: replace with a module call
+         if ($script eq 'setup_service'){
+           print " - Running built-in deploy_service\n";
+           KBDeploy::deploy_service($hashfile,$dry_run,$force);
+         }
+         else{
+           mysystem("cd $basedir/config;./$script $opts $hashfile");
+         }
+       }
+       else{
+         KBDeploy::update_service($hashfile,$dry_run);
+       }
      }
    }
 }

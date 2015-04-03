@@ -21,6 +21,7 @@ add_package("docker.io","/usr/bin/docker");
 
 
 add_package("python-software-properties","/usr/bin/add-apt-repository");
+add_package("software-properties-common","/usr/bin/add-apt-repository");
 if ( ! -e "/usr/sbin/nginx" ){
     mysystem("echo ''|add-apt-repository ppa:nginx/stable");
     mysystem("apt-get update ; apt-get install -y nginx nginx-extras");
@@ -34,7 +35,12 @@ if ( ! -e "/usr/local/lib/luarocks/rocks/luasocket" ){
     mysystem("luarocks install lua-spore");
     mysystem("luarocks install luacrypto");
 }
+add_package("nodejs-dev npm nodejs-legacy","/usr/bin/node");
+mysystem("npm install -g grunt-cli");
 
+mysystem("usermod www-data -G docker");
+mysystem("restart docker.io");
+mysystem("/etc/init.d/apache2 stop");
 
 
 sub add_package {
@@ -45,3 +51,7 @@ sub add_package {
   system("$PIC $packagelist");
 
 }
+
+# TODO 
+# Fix resolv.conf
+

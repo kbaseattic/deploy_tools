@@ -33,6 +33,7 @@ In general, parameters are initialized to the value defined in a "[defaults]" se
 - deploydir - Target directory for deployment (i.e. /kb/deployment)
 - devcontainer - Directory to use for the dev\_container (i.e. /kb/dev\_container)
 - disksize - Default disk size for a volume
+- docbase - Directory where symlinks to web documentation will be created.
 - dtdir - Where the deploy tools should be copied to on remote service hosts.
 - hashfile - The filename to store the git hashes.  This is located in the dev container.
 - make-options - Default options to include in the make command (i.e. DEPLOY\_RUNTIME=$KB\_RUNTIME ANT\_HOME=$KB\_RUNTIME/ant)
