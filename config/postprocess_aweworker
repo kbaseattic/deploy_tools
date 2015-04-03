@@ -19,6 +19,7 @@ $base_url=~s/\///;
 
 my @sl=myservices();
 my $service=$sl[0];
+my $base_dir=$cfg->{services}->{$service}->{'baseworkdir'};
 
 print "Service: $service\n";
 
@@ -32,6 +33,16 @@ $mcfg->newval('Client','clientgroup_token',"replace");
 $mcfg->newval('Client','serverurl',$cfg->{services}->{$service}->{'serverurl'}) or die "Unable to set serverurl";
 $mcfg->setval('Client','supported_apps','*');
 $mcfg->setval('Client','name','hostname');
+$mcfg->setval('Client','workpath',$base_dir."/work");
+$mcfg->setval('Directories','data',$base_dir."/data");
+$mcfg->setval('Directories','logs',$base_dir."/logs");
+
+
+my $sdir=$KB_DEPLOY."/services/awe_service/";
+
+mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
+mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
+
 
 my $defaultdone=0;
 foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
@@ -39,18 +50,20 @@ foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
   my $group=$l[1];
   $mcfg->setval('Client','group',$group);
   $mcfg->setval('Client','clientgroup_token',$token);
+
   my $out=$file;
   if ($defaultdone == 1){
+    $mcfg->setval('Client','workpath',$base_dir."/work.".$group);
+    $mcfg->setval('Directories','data',$base_dir."/data.".$group);
+    $mcfg->setval('Directories','logs',$base_dir."/logs.".$group);
     $out=~s/cfg$//;
     $out.="$group.cfg";
-    $defaultdone=1;
+    update_scripts($sdir,$group);
   }
   print "Updating $out\n";
   $mcfg->WriteConfig($out) or die "Unable to write $file";
+  $defaultdone=1;
 }
-
-mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
-mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
 
 # May not be needed anymore.  Check.
 mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
@@ -70,8 +83,33 @@ if ( ! -e "$KB_DEPLOY/bin/assemble_contigset_from_reads") {
 
 # TODO
 #
-# export AUTH='Authorization: OAuth $TOK
+# export TOKEN=$(grep token ~/.kbase_config|sed 's/token=//')
 #
-#curl -X POST -H "$AUTH" http://<awe>:7107/cgroup/next
+#curl -X POST -H "AUthorization: OAuth $TOKEN" http://kbase.us/services/awe-api/cgroup/<cgroup>
 #
 # Grab output and stuff in config
+
+sub update_scripts {
+  my $sdir=shift;
+  my $group=shift;
+
+  # TODO: This is a hack
+  open(START,">> $sdir/start_service") or die "Unable to modify start script";
+  print START "AWEC_CONFIG=/kb/deployment/services/awe_service/conf/awec.$group.cfg\n";
+  print START "PID_FILE=/kb/deployment/services/awe_service/client$group.pid\n";
+  print START "\$KB_RUNTIME/sbin/daemonize -v -o \$AWE_DIR/awec-start$group.log -e \$AWE_DIR/awec-start$group.log -p \$PID_FILE \\\n";
+  print START "      \$KB_TOP/bin/awe-client -conf \$AWEC_CONFIG\n";
+  close START;
+
+  open(STOP,">> $sdir/stop_service");
+  print STOP "PID_FILE=/kb/deployment/services/awe_service/client$group.pid\n";
+  print STOP "if [ -f \$PID_FILE ]; then\n";
+  print STOP "    PID=`cat \$PID_FILE`\n";
+  print STOP "    echo \"terminating process ID \$PID\"\n";
+  print STOP "    kill -TERM -\$PID\n";
+  print STOP "    rm \$PID_FILE\n";
+  print STOP "else\n";
+  print STOP "    echo \"No pid file \$PID_FILE found for awe client\"\n";
+  print STOP "fi\n";
+  close STOP;
+}
