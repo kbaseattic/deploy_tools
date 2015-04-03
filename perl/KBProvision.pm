@@ -135,4 +135,15 @@ sub run_remote{
   return 1;
 }
 
+# bootstrap is used to run functions and scripts as root
+# on the node.  This is used for things like adding packages
+# creating file systems, adding users etc.
+#
+sub bootstrap{
+  my $list=shift;
+  my $command=shift;
+
+  mysystem("updatenode $list -P '$command'");
+}
+
 1;

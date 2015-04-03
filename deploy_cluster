@@ -1,6 +1,7 @@
 #!/usr/bin/env perl 
 
-use lib './perl';
+use FindBin;
+use lib "$FindBin::Bin/perl/";
 use Data::Dumper;
 use KBDeploy;
 use KBProvision;
@@ -11,9 +12,9 @@ my $debug=0;
 my $verbose=0;
 my %opt;
 my $dry_run=0;
-my $force;
-my $defcfgfile='cluster.ini';
-my $cfgfile=$defcfgfile;
+my $force=0;
+my $defcfgfile='/cluster.ini';
+my $cfgfile=$FindBin::Bin.'/'.$defcfgfile;
 getopts('nvfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
 
 $dry_run=1 if (defined $opt{n});
@@ -32,6 +33,9 @@ if (/mkvm/) {
     update_available();
     configure_vms();
 }
+elsif (/^bootstrap/) {
+    bootstrap(@ARGV);
+}
 elsif (/boot/) {
     KBProvision::boot_nodes($global->{xcatgroup});
 }
@@ -39,7 +43,10 @@ elsif (/syncdt/) {
     sync_dt(@ARGV);
 }
 elsif (/^deploy/) {
-    deploy_services(@ARGV);
+    deploy_services(0,@ARGV);
+}
+elsif (/^update$/) {
+    deploy_services(1,@ARGV);
 }
 elsif (/updatehostassignments/) {
      update_available();
@@ -109,6 +116,77 @@ sub configure_vms {
   }
 }
 
+# This will get executed on each node as root during bootstrap
+#
+# TODO: Move into KBDeploy
+# TODO: Create some kind of versioning for bootstrap to detect 
+#       when something is out of sync
+#
+sub bootstrap_local {
+  warn "Bootstraping local host";
+  die "This must run as root." unless $< eq 0;
+
+  # Run bootstrap for the node and any services
+  my @sl=('node');
+
+  # TODO: Support local customization?
+  push @sl,myservices();
+   
+  for my $service (@sl){
+    my $bs="$basedir/local/bootstrap_".$service;
+    if ( -e $bs ){
+      print " - Local Bootstrap $service\n";
+      chmod 0755, $bs;
+      mysystem("cd $basedir/config;$bs");
+    }
+    $bs="$basedir/config/bootstrap_".$service;
+    if ( -e $bs ){
+      print " - Bootstrap $service\n";
+      chmod 0755, $bs;
+      mysystem("cd $basedir/config;$bs");
+    }
+  } 
+  
+}
+#
+# Bootstrap the node
+#
+sub bootstrap {
+   # Push out the scripts
+   my $fl=join " ",@_;
+   my $list=KBDeploy::hostlist();
+   $list=$fl if $fl;
+
+   if ($list eq 'local'){
+     bootstrap_local();
+     return; 
+   }
+   warn "Bootstraping hosts $list";
+   # Move to provisoin
+   my $bi=$cfg->{global}->{'bootstrap-init'};
+   if (defined $bi){
+     KBProvision::bootstrap($list,$bi);
+   }
+   else {
+     warn "bootstrap-init not defined in global section of INI";
+     return;
+   }
+   # Sync up DT so we can use it
+   sync_dt(@_);
+
+   # Copy localized scripts out to nodes
+   my $bl=$cfg->{global}->{'bootstrap-local'};
+   if ( defined $bl && -e $bl ) {
+      my $b=$bl;
+      $b=~s/\/$//;
+      $b=~s/.*\///;
+      mysystem("pdcp -w $list -r $bl $basedir/");
+      mysystem("pdsh -w $list ln -sf $basedir/$b $basedir/local");
+   }
+   # Run the DT bootstrap on each node (see above)
+   KBProvision::bootstrap($list,"$bi $basedir/$0 bootstrap local");
+}
+
 #
 # Copy out deploy_tools
 # TODO: Replace with bootstrap process
@@ -131,6 +209,7 @@ sub sync_dt {
 # Deploy service
 #
 sub deploy_services{
+   my $update=shift;
    my $option=shift;
    my $hashfile;
    my $remote=0;
@@ -140,7 +219,9 @@ sub deploy_services{
    my $opts='';
    $opts.=' -n' if $dry_run;
    $opts.=' -f' if $force;
+   $opts.=' -v' if $verbose;
 
+   # Figure out where what we are deploying and where
    if ($option eq 'all'){
      print "Deploy All\n" if $verbose;
      $list=KBDeploy::hostlist();
@@ -150,6 +231,10 @@ sub deploy_services{
    elsif (defined $cfg->{services}->{$option}){
      $list=$cfg->{services}->{$option}->{host};
      push @sl,$option;
+     if ($list eq ''){
+       print "$option isn't associated with a host\n";
+       exit;
+     }
      print "Deploy $option on $list\n" if $verbose;
      $remote=1;
    }
@@ -160,6 +245,8 @@ sub deploy_services{
      print "Local Deploy\n" if $verbose;
      unshift @_,$option;
    }
+
+   # Get the hashfile
    $hashfile=shift;
    if (defined $hashfile){
      if (! -e $hashfile){
@@ -172,7 +259,7 @@ sub deploy_services{
    }
    
    if ($remote){
-     update_available();
+     #update_available();
      if (defined $hashfile){
        KBProvision::sync_files($list,$basedir,$hashfile);
        # Remove path stuff
@@ -181,23 +268,46 @@ sub deploy_services{
      }
      KBProvision::sync_file($list,$basedir,$cfgfile,$defcfgfile);
    
-     #Now run the local scripts
+     #Now run the setup scripts
      for my $service (@sl){
-       my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
        print "$service:\n";
        if (defined $cfg->{services}->{$service}->{skipdeploy}){
          print " - Skipping: skipdeploy set.\n" if $verbose;
          next;
        }
-       print " - Running: $script $opts $hashfile\n" if $verbose;
-       mysystem("ssh ".$cfg->{services}->{$service}->{host}." 'cd $basedir/config;./$script $opts $hashfile'");
+       my $script=$cfg->{services}->{$service}->{setup} if (defined $cfg->{services}->{$service}->{setup});
+       if ( $script ne 'setup_service'){
+         print " - Running: $script $opts $hashfile\n" if $verbose;
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/config;./$script $opts $hashfile");
+       }
+       elsif (! $update && $script eq 'setup_service'){
+         print " - Running: $0 $opts deploy local $hashfile\n" if $verbose;
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts deploy local $hashfile");
+       }
+       else{
+         print " - Running: $0 $opts update local $hashfile\n" if $verbose;
+         # TODO: replace with a module call
+         KBProvision::run_remote($cfg->{services}->{$service}->{host},"cd $basedir/;./$0 $opts update local $hashfile");
+       }
      }
    }
    else{
      @sl=myservices();
      for my $service (@sl){
-        my $script=$cfg->{services}->{$service}->{setup};
-        mysystem("cd $basedir/config;./$script $opts $hashfile");
+       if ($update eq 0){
+         my $script=$cfg->{services}->{$service}->{setup};
+         # TODO: replace with a module call
+         if ($script eq 'setup_service'){
+           print " - Running built-in deploy_service\n";
+           KBDeploy::deploy_service($hashfile,$dry_run,$force);
+         }
+         else{
+           mysystem("cd $basedir/config;./$script $opts $hashfile");
+         }
+       }
+       else{
+         KBDeploy::update_service($hashfile,$dry_run);
+       }
      }
    }
 }

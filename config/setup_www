@@ -8,11 +8,9 @@ use strict;
 my %opt;
 my $force=0;
 my $dryrun=0;
-my $bootstrap=0;
 
-getopts('nfb',\%opt);
+getopts('nf',\%opt);
 $dryrun=1 if defined $opt{n};
-$bootstrap=1 if defined $opt{b};
 $force=1 if defined $opt{f};
 
 # Parameters
@@ -26,8 +24,6 @@ my $cfg=read_config();
 my @sl=myservices();
 die "Only run this on the www host\n" unless $sl[0] eq 'www';
 
-
-bootstrap() if $bootstrap;
 
 if ($dryrun){
   print " - Exiting in dry run mode.\n";
@@ -147,12 +143,3 @@ sub print_narrative {
   print $fh "        }\n";
 }
 
-sub bootstrap {
-  mysystem("[ ! -e '/usr/sbin/apache2' ] || apt-get -y remove apache2");
-  system("dpkg -l |grep -c  python-software-properties > /dev/null");
-  mysystem("apt-get -y install python-software-properties") unless $? eq 0;
-
-  mysystem("echo ''|add-apt-repository ppa:nginx/stable;apt-get update;apt-get install -y nginx") unless -e "/etc/apt/sources.list.d/nginx-stable-precise.list";
-  mysystem("[ -e /usr/sbin/nginx ] || apt-get -y install nginx");
-  exit;
-}

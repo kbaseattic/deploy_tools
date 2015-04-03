@@ -17,13 +17,13 @@ use vars  qw(@ISA @EXPORT_OK);
 use base qw(Exporter);
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service deploy_service myservices mkdocs);
+our @EXPORT = qw(read_config mysystem deploy_devcontainer start_service stop_service myservices mkdocs);
 
+our $logfh;
+our $loglevel=0;
 our $cfg;
-$cfg->{global}->{type}='global';
-$cfg->{defaults}->{type}='defaults';
-our $global=$cfg->{global};
-our $defaults=$cfg->{defaults};
+our $global; #=$cfg->{global};
+our $defaults; #=$cfg->{defaults};
 
 our $cfgfile;
 
@@ -38,7 +38,8 @@ elsif ( -e $FindBin::Bin.'/../cluster.ini'){
   $cfgfile=$FindBin::Bin.'/../cluster.ini';
 }
 else {
-  die "Unable to find config file\n";
+  $cfgfile="unknown";
+  warn "Unable to find config file\n";
 }
 
 
@@ -54,20 +55,31 @@ our %reponame;
 our $basedir=$FindBin::Bin;
 $basedir=~s/config$//;
 
-# Defaults and paths
-#my $KB_DC="$KB_BASE/dev_container";
-#my $KB_RT="$KB_BASE/runtime";
-#my $MAKE_OPTIONS=$ENV{"MAKE_OPTIONS"};
-#
-#$KB_DEPLOY=$global->{deploydir} if (defined $global->{deploydir});
-#$KB_DC=$global->{devcontainer} if (defined $global->{devcontainer});
-#$KB_RT=$global->{runtime} if (defined $global->{runtime});
-
+# TODO: Move this
 if (-e "$basedir/config/gitssh" ){
   $ENV{'GIT_SSH'}=$basedir."/config/gitssh";
 }
 
+sub setlog {
+  $logfh=shift; 
+}
+
+sub setloglevel {
+  $loglevel=shift; 
+}
+
+sub kblog {
+  my $line=shift;
+  my $level=shift;
+  setlog(*STDOUT) if ! defined $logfh;
+
+  print $logfh $line;
+}
+
 sub maprepos {
+  undef %repo;
+  undef %reponame;
+  undef %reponame2service;
   for my $s (keys %{$cfg->{services}}){
   #
     $repo{$s}=$cfg->{services}->{$s}->{giturl};
@@ -114,7 +126,23 @@ sub read_config {
    $cfgfile=$file if defined $file;
 
    my $mcfg=new Config::IniFiles( -file => $cfgfile) or die "Unable to open $file".$Config::IniFiles::errors[0];
-   $cfg->{global}->{repobase}='undefined';
+
+   # Reset things
+   undef $cfg;
+   $cfg->{global}->{type}='global';
+   $cfg->{defaults}->{type}='defaults';
+   $global=$cfg->{global};
+   $defaults=$cfg->{defaults};
+   $global->{repobase}="undefined";
+   $global->{basename}="bogus";
+   $global->{hashfile}="githashes";
+   $global->{runtime}="/usr";
+   $global->{'make-options'}="";
+   $global->{'default-modules'}="kbapi_common,typecomp,jars,auth";
+   $defaults->{'setup'}='setup_service';
+   $defaults->{'auto-deploy-target'}='deploy';
+   $defaults->{'git-branch'}='master';
+   $defaults->{'test-args'}='test';
 
    # Read global and default first
    for my $section ('global','defaults'){
@@ -122,7 +150,9 @@ sub read_config {
          $cfg->{$section}->{$_}=$mcfg->val($section,$_);
        }
    }
-   # Could use the tie option, but let's build it up ourselves
+   # Trim off trailing slash to avoid bogus mismatches
+   $global->{repobase}=~s/\/$//;
+   
    
    for my $section ($mcfg->Sections()){
      next if ($section eq 'global' || $section eq 'defaults');
@@ -139,6 +169,7 @@ sub read_config {
      foreach ($mcfg->Parameters($section)){
        $cfg->{services}->{$section}->{$_}=$mcfg->val($section,$_);
      }
+     $cfg->{services}->{$section}->{giturl}=cleanup_url($cfg->{services}->{$section}->{giturl});
      push @{$cfg->{servicelist}},$section if ( $cfg->{services}->{$section}->{type} eq 'service');
    }
    maprepos();
@@ -167,10 +198,18 @@ sub mysystem {
 }
 
 # Helper function to clone a module and checkout a tag.
+# Also records the tag that was cloned or checked out
 sub clonetag {
   my $package=shift;
   # get the service name (which may be different than the package name
-  my $serv=$reponame2service{$package};
+  my $serv=$package;
+  $serv=$reponame2service{$package};# if ! defined $serv;
+  # Workaround.  Need to restructure where hash/URLs are stored
+  #
+  if (! defined $cfg->{services}->{$serv}->{hash} && 
+        defined $cfg->{services}->{$package}->{hash}){
+    $serv=$package;
+  }
   my $repo=$repo{$package};
   die "no repo defined for $package!" unless $repo;
   my $mytag=$cfg->{services}->{$serv}->{hash};
@@ -179,30 +218,30 @@ sub clonetag {
   $mytag="head" if ! defined $mytag; 
   $mybranch="master" if ! defined $mybranch; 
   $mytag=$global->{tag} if defined $global->{tag};
-  print "  - Cloning $package (tag: $mytag branch:$mybranch)\n";
-  my $dir=$reponame{$package};
-  if ( -e $dir ) {
-    warn "$dir already exists";
-    chdir $dir or die "Unable to cd to $dir";
-    # Make sure we are on head
-    mysystem("git checkout $mybranch  > /dev/null 2>&1");
-    mysystem("git pull  > /dev/null 2>&1");
-    chdir("../");
+  kblog "  - Cloning $package (tag: $mytag branch:$mybranch)\n";
+  my $rname=$reponame{$package};
+  my $dir=$rname;
+
+  # If the directory exist and matches our tag, then we are happy 
+  if ( -e $dir && defined $cfg->{deployed}->{$rname}){
+    kblog "Checking state\n";
+    # Return if the versions are the same
+    return if $cfg->{deployed}->{$rname}->{hash} eq $mytag;
+    kblog "Deployed version is different.\n";
   }
   else {
     mysystem("git clone --recursive $repo > /dev/null 2>&1");
-# need $dir here?
-    chdir $dir or die "Unable to chdir";
-    mysystem("git checkout $mybranch > /dev/null 2>&1");
-    chdir "../";
+    #chdir $dir or die "Unable to chdir";
+    #mysystem("git checkout $mybranch > /dev/null 2>&1");
+    #chdir "../";
   }
+
   if ( $mytag ne "head" ) {
     chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mytag\" > /dev/null 2>&1");
     chdir "../";
   }
   elsif ( $mybranch ne "master" ) {
-    warn "checking out branch $mybranch";
     chdir $dir or die "Unable to chdir";
     mysystem("git checkout \"$mybranch\" > /dev/null 2>&1");
     chdir "../";
@@ -210,10 +249,43 @@ sub clonetag {
   # Save the stats
   my $hash=`cd $dir;git log --pretty='%H' -n 1` or die "Unable to get hash\n";
   chomp $hash;
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  open GH,">> $hf" or die "Unable to create $hf\n";
-  print GH "$serv $repo $hash\n";
+  die "hash doesn't match expected value $hash vs $mytag" if ($hash ne $mytag && $mytag ne 'head');
+  # This will get writen into a hash file
+  $cfg->{deployed}->{$rname}->{hash}=$hash;
+  $cfg->{deployed}->{$rname}->{repo}=$repo;
+}
+
+# Write out githash
+sub write_githash {
+  my $hf=shift;
+  open GH,'>'.$hf or die "Unable to create $hf\n";
+  foreach my $serv (keys %{$cfg->{deployed}}){
+    my $dep=$cfg->{deployed}->{$serv};
+    printf GH "%s %s %s\n",$serv,$dep->{repo},$dep->{hash};
+  }
+  print GH "Done\n";
   close GH;
+}
+
+# Read githash
+sub read_githash {
+  my $hf=shift; 
+
+  if (! open(H,"$hf")){
+    kblog "No hash file $hf\n";
+    return 1;
+  }
+
+  while(<H>){
+    return 0 if /Done/;
+    my ($serv,$repo,$hash)=split;
+    $repo=cleanup_url($repo);
+    $cfg->{deployed}->{$serv}->{hash}=$hash;
+    $cfg->{deployed}->{$serv}->{repo}=$repo;
+  }
+  # Not sure about this
+  delete $cfg->{deployed};
+  return 1;
 }
 
 # Recursively get dependencies
@@ -221,7 +293,7 @@ sub clonetag {
 sub getdeps {
   my $mserv=shift;
   my $KB_DC=$global->{devcontainer};
-  print "  - Processing dependencies for $mserv\n";
+  kblog "  - Processing dependencies for $mserv\n";
   $mserv=$reponame{$mserv} if defined $reponame{$mserv};
 
   my $DEP="$KB_DC/modules/$mserv/DEPENDENCIES";
@@ -261,21 +333,24 @@ sub deploy_devcontainer {
   clonetag "dev_container";
   chdir "dev_container/modules";
 
-  for my $pack ("kbapi_common","typecomp","jars","auth" ) {
+  for my $pack (split /,/,$global->{'default-modules'}){
+    next if $pack eq '';
     clonetag $pack;
   }
   chdir("$KB_DC");
-  mysystem("./bootstrap $KB_RT");
+  mysystem("./bootstrap $KB_RT >> $LOGFILE 2>&1");
 
   # Fix up setup
-  mysystem("$basedir/config/fixup_dc");
+  if (-e "$basedir/config/fixup_dc"){
+    mysystem("$basedir/config/fixup_dc");
+  }
 
-  print "Running Make in dev_container\n";
+  kblog "Running Make in dev_container\n";
   mysystem(". ./user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
-  print "Running make deploy\n";
+  kblog "Running make deploy\n";
   mysystem(". ./user-env.sh;make deploy $MAKE_OPTIONS >> $LOGFILE 2>&1");
-  print "====\n";
+  kblog "====\n";
 }
 
 # Start service helper function
@@ -286,11 +361,11 @@ sub start_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if (defined $cfg->{services}->{$s}->{basedir});
     if ( -e "$KB_DEPLOY/services/$spath/start_service" ) {
-      warn "Starting service $s\n";
+      kblog "Starting service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./start_service &");
     }
     else {
-      print "No start script found in $s\n";
+      kblog "No start script found in $s\n";
     }
   }
 }
@@ -304,7 +379,7 @@ sub stop_service {
     my $spath=$s;
     $spath=$cfg->{services}->{$s}->{basedir} if defined $cfg->{services}->{$s}->{basedir};
     if ( -e "$KB_DEPLOY/services/$spath/stop_service"){
-      warn "Stopping service $s\n";
+      kblog "Stopping service $s\n";
       mysystem(". $KB_DEPLOY/user-env.sh;cd $KB_DEPLOY/services/$spath;./stop_service || echo Ignore");
 # don't care about return value here (really bad style, I know)
       system("pkill -f glassfish");
@@ -317,17 +392,17 @@ sub test_service {
   my $KB_DC=$global->{devcontainer};
   for my $s (@_)  {
     if (defined $cfg->{services}->{$s}->{'skip-test'} && $cfg->{services}->{$s}->{'skip-test'} == 1) {
-        warn "skipping tests for $s";
+        kblog "skipping tests for $s";
         return;
     }
-    warn "running tests for $s";
+    kblog "running tests for $s";
 
     my $spath=$s;
 # need the git checkout dir name here
     my $giturl=$cfg->{services}->{$s}->{giturl} if (defined $cfg->{services}->{$s}->{giturl});
     ($spath)=$giturl=~/.*\/(.+)$/ if ($giturl);
     if ( -e "$KB_DC/modules/$spath" ) {
-      warn "Testing service $s\n";
+      kblog "Testing service $s\n";
       # not sure why it's not picking up DEPLOY_RUNTIME
       # need to fix this at some point, but not essential right now
       my $TEST_ARGS=$cfg->{services}->{$s}->{'test-args'};
@@ -335,7 +410,7 @@ sub test_service {
 #      mysystem(". $KB_DC/user-env.sh;cd $KB_DC/modules/$spath;DEPLOY_RUNTIME=\$KB_RUNTIME make $TEST_ARGS &> $LOGFILE ; echo 'done with tests'");
     }
     else {
-      print "No dev directory found in $s\n";
+      kblog "No dev directory found in $s\n";
     }
   }
 }
@@ -415,7 +490,7 @@ sub prepare_service {
 
   chdir "$KB_DC/modules";
   for my $mserv (@_) {
-    print "Deploying $mserv\n";
+    kblog "Deploying $mserv\n";
     # Clone or update the module
     clonetag $mserv;
     if (defined $cfg->{services}->{$mserv}->{deploy}){
@@ -439,19 +514,31 @@ sub mkhashfile {
     $tagfile="tagfile.$ds";
   }
   my $out;
+  my %hashes;
   for my $service (keys %{$cfg->{services}}){
     my $s=$cfg->{services}->{$service};
     next if $s->{giturl} eq 'none';
     my $tag=KBDeploy::gittag($service);
-    print STDERR "Problem with $service\n" unless length($tag)>0;
+    my $rname=$reponame{$service};
+    if (length $tag eq 0){
+      print STDERR "Failed to get tag for $service\n";
+      return 0;
+    }
+    if (defined $hashes{$rname} && $tag ne $hashes{$rname}){
+      print STDERR "You have two services that map to the same reponame,\n";
+      print STDERR "yet result in different hashes. Please correct.\n";
+      print STDERR "Failing mkhashfile.\n";
+      return 0;
+    }
+    $hashes{$rname}=$tag;
 
     $out.="$service $s->{giturl} $tag\n";
   }
   open TF,"> $tagfile" or die "Unable to create $tagfile\n";
-  print "Tagfile: $tagfile\n";
   print TF "# $ds\n";
   print TF $out;
   close TF;
+  return 1;
 }
 
 #
@@ -470,7 +557,7 @@ sub updatehashfile {
     chomp;
     my ($service,$url,$tag)=split;
     if (defined $update{$service}){
-      print "Updating $service\n";
+      kblog "Updating $service\n";
       $url=$cfg->{services}->{$service}->{giturl};
       $tag=KBDeploy::gittag($service);
       print STDERR "Problem with $service\n" unless length($tag)>0;
@@ -479,7 +566,6 @@ sub updatehashfile {
   }
   close TF;
   open TF,"> $tagfile" or die "Unable to create $tagfile\n";
-  print "Tagfile: $tagfile\n";
   print TF "# $ds\n";
   print TF $out;
   close TF;
@@ -492,50 +578,60 @@ sub readhashes {
     next if /^#/;
     chomp;
     my ($s,$url,$hash)=split;
-    $cfg->{services}->{$s}->{hash}=$hash;
+    $url=cleanup_url($url);
     my $confurl=$cfg->{services}->{$s}->{giturl};
     $confurl="undefined" if ! defined $confurl;
-    print STDERR "Warning: different git url for service $s\n" if $confurl ne $url;
-    print STDERR "Warning: $confurl vs $url\n" if $confurl ne $url;
+    kblog "Warning: different git url for service $s\n" if $confurl ne $url;
+    kblog "Warning: $confurl(config file) vs $url(tag file)\n" if $confurl ne $url;
     $cfg->{services}->{$s}->{hash}=$hash;
     $cfg->{services}->{$s}->{giturl}=$url;
   }
   close H;
 }
 
-sub redeploy_service {
+#
+# check_updates
+#  Returns status and a list
+#  status=1 if redeploy need and 0 if not
+#  list is list of services that changed
+#
+sub check_updates {
   my $tagfile=shift; 
 
   die "Tagfile $tagfile not found" unless -e $tagfile;
   readhashes($tagfile);
+
 # Check hashes
 
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  if (! open(H,"$hf")){
-    print STDERR "No hash file $hf\n";
-    return 1;
-  }
-
-  while(<H>){
-    return 0 if /^Done$/;
-    chomp;
-    my ($s,$url,$hash)=split;
-    if ($url ne $cfg->{services}->{$s}->{giturl}){
-      print " - Redeploy change in URL for $s\n";
-      return 1;
+  my $redeploy=read_githash($global->{devcontainer}."/".$global->{hashfile});
+  kblog "No previous deploy or previous deploy was incomplete\n" if ($redeploy);
+  my @redeploy_list;
+  for my $r (keys %{$cfg->{deployed}}){
+    my $repo=$cfg->{deployed}->{$r}->{repo};
+    my $hash=$cfg->{deployed}->{$r}->{hash};
+    my $s=$r;
+    $s=$reponame2service{$r} if ! defined $cfg->{services}->{$s}->{giturl};
+    die "Error: couldn't find a matching service for $s\n" if ! defined $cfg->{services}->{$s}->{giturl};
+    if ($repo ne $cfg->{services}->{$s}->{giturl}){
+      kblog " - Redeploy change in URL for $s\n";
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
-    if (! defined $cfg->{services}->{$s}->{hash}){
-      print " - Redeploy no hash for $s\n";
-      return 1;
+    elsif (! defined $cfg->{services}->{$s}->{hash}){
+      kblog " - Redeploy no hash for $s\n";
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
-    if ($hash ne $cfg->{services}->{$s}->{hash}){
-      print " - Redeploy change in hash for $s\n";
-      return 1;
+    elsif ($hash ne $cfg->{services}->{$s}->{hash}){
+      kblog " - Redeploy change in hash for $s\n";
+      push @redeploy_list,$s;
+      $redeploy=1;
     }
   }
  
   # Missing Done flag 
-  return 1;
+  return ($redeploy,@redeploy_list);
+  #return 1;
 }
 
 sub auto_deploy {
@@ -549,6 +645,8 @@ sub auto_deploy {
   my $d=`date +%s`;
   chomp $d;
   rename($KB_DEPLOY,"$KB_DEPLOY.$d") if -e $KB_DEPLOY;
+  # Cleanup deployed structure
+  undef $cfg->{deployed};
   mysystem("rm -rf $KB_DC") if (-e $KB_DC);
 
   # Empty log file
@@ -560,10 +658,10 @@ sub auto_deploy {
   prepare_service($LOGFILE,$KB_DC,@_);
   chdir("$KB_DC");
 
-  print "Starting bootstrap $KB_DC\n";
-  mysystem("./bootstrap $KB_RT");
+  kblog "Starting bootstrap $KB_DC\n";
+  mysystem("./bootstrap $KB_RT >> $LOGFILE 2>&1");
 
-  print "Running make\n";
+  kblog "Running make\n";
   mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
 
   if ( ! -e $KB_DEPLOY ){
@@ -573,63 +671,117 @@ sub auto_deploy {
   my $ad=$KB_DC."/autodeploy.cfg";
   generate_autodeploy($ad);
 
-  print "Running auto deploy\n";
+  kblog "Running auto deploy\n";
   mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
 }
 
+#
+# Deploy
+#
 sub deploy_service {
+  my $hashfile=shift;
+  my $dryrun=shift;
+  my $force=shift;
+
+  my @sl=myservices();
+  
+  return -1 unless scalar(@sl);
+
+  mkdocs(@sl);
+  return -2 if (! defined $hashfile && is_complete(@sl) && $force);
+#
+# redploy_service will tell us if we need to repeploy but
+# it also populates that hashes to deploy
+  my ($redeploy,@list)=KBDeploy::check_updates($hashfile,@sl);
+  if (! $redeploy && $force==0){
+    kblog " - No deploy required for $sl[0]\n";
+    return -3;
+  }
+  if ($dryrun){
+    kblog " - Redploy needed.  Exiting with dryrun\n";
+    return -4;
+  }
+
+  stop_service(@sl);
+  auto_deploy(@sl);
+  postprocess(@sl);
+  start_service(@sl);
+  mark_complete(@sl);
+  return 0;
+}
+
+
+#
+# Update service only redeploys modules that have changed
+#
+sub update_service {
+  my $hashfile=shift;
+  my $dryrun=shift;
+
+# Connivence variables
   my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$global->{deploydir};
   my $KB_DC=$global->{devcontainer};
   my $KB_RT=$global->{runtime};
   my $MAKE_OPTIONS=$global->{'make-options'};
-  my $target=shift;
+  my $ad=$KB_DC."/autodeploy.cfg";
+  my @sl=myservices();
 
-  # Extingush all traces of previous deployments
-  my $d=`date +%s`;
-  chomp $d;
-  rename($KB_DEPLOY,"$KB_DEPLOY.$d") if -e $KB_DEPLOY;
-  mysystem("rm -rf $KB_DC") if (-e $KB_DC);
-
-  # Empty log file
-  unlink $LOGFILE if ( -e $LOGFILE );
-
-  # Create the dev container and some common dependencies
-  deploy_devcontainer($LOGFILE) unless ( -e "$KB_DEPLOY/bin/compile_typespec" );
-
-  prepare_service($LOGFILE,$KB_DC,@_);
-  chdir("$KB_DC");
-
-  print "Starting bootstrap $KB_DC\n";
-  mysystem("./bootstrap $KB_RT");
-  # Fix up setup
-  mysystem("$basedir/config/fixup_dc");
-
-  if ( ! -e $KB_DEPLOY ){
-    mkdir $KB_DEPLOY or die "Unable to mkkdir $KB_DEPLOY";
+  return -1 if scalar @sl eq 0;
+  kblog "Updating @sl with $hashfile\n"; 
+  mkdocs(@sl);
+  # TODO: Should we keep this
+  return -2 if (! defined $hashfile && KBDeploy::is_complete(@sl));
+#
+# redploy_service will tell us if we need to repeploy but
+# it also populates that hashes to deploy
+  my ($reqdep,@redeploy)=check_updates("$hashfile",@sl);
+  if ($reqdep==0){
+    kblog " - No deploy required for $sl[0]\n";
+    return -3;
   }
-  # Copy the deployment config from the reference copy
-  mysystem("cp $cfgfile $KB_DEPLOY/deployment.cfg");
 
-  print "Running make\n";
-  mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
+  if ($dryrun){
+    kblog " - Redploy needed.  Exiting with dryrun\n";
+    return -4;
+  }
 
-  return if $target eq '';
-  print "Running make $target\n";
-  mysystem(". $KB_DC/user-env.sh;make $target $MAKE_OPTIONS >> $LOGFILE 2>&1");
+  stop_service(@sl);
 
+  # Checkout the right versions
+  prepare_service($LOGFILE,$KB_DC,@redeploy);
+
+  # For each service we need to chdir in and do a make
+  kblog "  - Running make on updated modules\n";
+  foreach my $s (@redeploy){
+    my $rname=$reponame{$s};
+    chdir $KB_DC."/modules/".$rname;
+    mysystem(". $KB_DC/user-env.sh;make $MAKE_OPTIONS >> $LOGFILE 2>&1");
+  }
+  kblog "  - Running autodeploy\n";
+  chdir $KB_DC;
+  foreach my $s (@redeploy){
+    my $rname=$reponame{$s};
+    mysystem(". $KB_DC/user-env.sh;perl auto-deploy --module $rname $ad >> $LOGFILE 2>&1");
+  }
+  foreach my $s (@sl){
+    postprocess($s);
+  }
+
+  start_service(@sl);
+
+  mark_complete(@sl);
+  return 0;
 }
 
 sub postprocess {
   my $LOGFILE="/tmp/deploy.log";
   my $KB_DEPLOY=$global->{deploydir};
-  my $KB_DC=$global->{devcontainer};
-  my $KB_RT=$global->{runtime};
+  $ENV{'KB_CONFIG'}=$cfgfile;
   for my $serv (@_) {
-    if (-e "${FindBin::Bin}/postprocess_$serv") {
-      warn "postprocessing service $serv";
-      mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/postprocess_$serv >> $LOGFILE 2>&1");
-#      stop_service($serv);
+    if (-e "${FindBin::Bin}/config/postprocess_$serv") {
+      kblog "postprocessing service $serv";
+      mysystem(". $KB_DEPLOY/user-env.sh; ${FindBin::Bin}/config/postprocess_$serv >> $LOGFILE 2>&1");
     }
   }
 
@@ -650,9 +802,11 @@ sub gittag {
 
 sub mkdocs {
   my $KB_DEPLOY=$global->{deploydir};
+  my $docbase=$global->{docbase};
+  return if ! defined $docbase;
   for my $s (@_){
     my $bd=$cfg->{services}->{$s}->{basedir};
-    symlink $KB_DEPLOY."/services/$bd/webroot","/var/www/$bd";
+    symlink $KB_DEPLOY."/services/$bd/webroot","$docbase/$bd";
   } 
 }
 
@@ -662,12 +816,9 @@ sub mkdocs {
 #
 sub mark_complete {
   my @services=@_;
-  print 'Services deployed successfully: ' . join ', ', @services;
-  print "\n";
-  my $hf=$global->{devcontainer}."/".$global->{hashfile};
-  open GH,">> $hf" or die "Unable to create $hf\n";
-  print GH "Done\n";
-  close GH;
+  kblog 'Services deployed successfully: ' . join ', ', @services;
+  kblog "\n";
+  write_githash($global->{devcontainer}."/".$global->{hashfile});
 }
 
 # Use this to determine if a node is already finished
@@ -685,6 +836,14 @@ sub is_complete {
 sub reset_complete {
   my $hf=$global->{devcontainer}."/".$global->{hashfile};
   rename $hf,$hf.'.old';
+}
+
+# Remove double slashes
+#
+sub cleanup_url {
+  my $url=shift; 
+  $url=~s/([^:\/])\/\/([a-zA-Z])/$1\/$2/;
+  return $url;
 }
 
 1;

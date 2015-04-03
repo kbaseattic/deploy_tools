@@ -12,19 +12,23 @@ my @sl=myservices();
 
 # Fix up config
 my $file=$cfg->{'global'}->{deploydir}."/services/shock_service/conf/shock.cfg";
+my $scfg=$cfg->{services}->{shock};
+
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
-$mcfg->newval('Address','api-port',$cfg->{services}->{shock}->{'service-port'});
+$mcfg->newval('Address','api-port',$scfg->{'service-port'});
+$mcfg->setval('Admin','email',$scfg->{'admin-email'}) if defined $scfg->{'admin-email'};
+$mcfg->newval('Admin','users',$scfg->{'admin-users'}) if defined $scfg->{'admin-users'};
 
-$mcfg->setval('Mongodb','hosts',$cfg->{services}->{shock}->{'mongodb-host'});
-$mcfg->newval('Mongodb','database',$cfg->{services}->{shock}->{'mongodb-database'});
-$mcfg->newval('Mongodb','user',$cfg->{services}->{shock}->{'mongodb-user'});
-$mcfg->newval('Mongodb','password',$cfg->{services}->{shock}->{'mongodb-pwd'});
+$mcfg->setval('Mongodb','hosts',$scfg->{'mongodb-host'});
+$mcfg->newval('Mongodb','database',$scfg->{'mongodb-database'});
+$mcfg->newval('Mongodb','user',$scfg->{'mongodb-user'});
+$mcfg->newval('Mongodb','password',$scfg->{'mongodb-pwd'});
 
-$mcfg->setval('Paths','site',$cfg->{services}->{shock}->{'site'});
-$mcfg->setval('Paths','data',$cfg->{services}->{shock}->{'data'});
-$mcfg->setval('Paths','logs',$cfg->{services}->{shock}->{'logs'});
+$mcfg->setval('Paths','site',$scfg->{'site'});
+$mcfg->setval('Paths','data',$scfg->{'data'});
+$mcfg->setval('Paths','logs',$scfg->{'logs'});
 
-$mcfg->setval('Runtime','GOMAXPROCS',$cfg->{services}->{shock}->{'gomaxprocs'});
+$mcfg->setval('Runtime','GOMAXPROCS',$scfg->{services}->{shock}->{'gomaxprocs'});
 
 $mcfg->WriteConfig($file);
 

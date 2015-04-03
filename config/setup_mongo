@@ -9,20 +9,15 @@ use strict;
 my %opt;
 my $force=0;
 my $dryrun=0;
-my $bootstrap=0;
 
-getopts('nfb',\%opt);
+getopts('nf',\%opt);
 $dryrun=1 if defined $opt{n};
-$bootstrap=1 if defined $opt{b};
 $force=1 if defined $opt{f};
 
 my $debug=0;
 
 
 my $cfg=read_config();
-
-# Bootstrap and exit if bootstrap flag is given
-bootstrap() if $bootstrap;
 
 # Create Accounts for each service that uses mongo
 #
@@ -62,67 +57,3 @@ sub adduser {
   }
 }
 
-# Bootstrap will:
-# - Create the data partition and mount it
-# - Install Mongo
-# - Copy in the config
-# - Do an rs.initiate
-# - Create the admin account and .mongorc
-# - Enable auth
-#
-sub bootstrap {
-  mysystem("[ -e /sbin/mkfs.xfs ] ||  apt-get -y install xfsprogs");
-
-  # Format data
-  my $doformat=1;
-  open(M,"/proc/mounts");
-  while(<M>){
-    $doformat=0 if /\/data/;
-  }
-
-  if ($doformat) {
-    die "Missing /dev/vdb" unless -e "/dev/vdb";
-    mysystem("mkfs -t xfs /dev/vdb");
-    mkdir "/data" unless -e "/data";
-    mysystem("mount /dev/vdb /data");
-  }
-
-  # Add repo
-  if (! -e "/etc/apt/sources.list.d/mongodb.list" ){
-    mysystem("apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10","echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' > /etc/apt/sources.list.d/mongodb.list");
-  }
-  # Install Mongo
-  if (! -e "/usr/bin/mongo" ){
-    mysystem("apt-get update","apt-get -y install mongodb-org mongodb-org-server");
-  }
-
-  # Copy config files
-  mysystem("cp mongo.conf /etc/mongod.conf");
-  # Keyfile
-  mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
-  mkdir "/data/mongodb" unless -e '/data/mongodb';
-  mysystem("chown mongodb /data/mongodb");
-
-# restart
-  mysystem("service mongod restart");
-
-  mysystem("echo 'rs.initiate();'|mongo|grep -v shell|grep -v connecting|grep ok");
-  sleep(10);
-
-# Add admin account and create a .mongorc file
-#
-  my $user=$cfg->{services}->{mongo}->{user};
-  my $pwd=$cfg->{services}->{mongo}->{pwd};
-  if ( ! -e "/root/.mongorc.js"){
-    adduser('admin',$user,$pwd, "[\"userAdminAnyDatabase\",\"root\"]");
-    open(RC,"> /root/.mongorc.js");
-    print RC "db = db.getSiblingDB('admin')\n";
-    print RC "db.auth('$user','$pwd')\n";
-    close RC;
-    open(MC,">> /etc/mongod.conf");
-    print MC "auth = true\n";
-    close MC;
-    mysystem("service mongod restart");
-  }
-  exit;
-}

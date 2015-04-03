@@ -1,51 +1,75 @@
 #!/usr/bin/env perl
 use strict;
 
-my $debug=0;
-my $user="jenkins";
-my $id="30171";
-
 # Generic script to bootstrap a node.  This should handle all of the
 # items requiring root privs.
 #
+my $debug=0;
+my $version="20150204.3";
+my $vf="/.kb_bootstrap";
+my $PIC="apt-get install -y";
+
+
+
+# Check version file
+if (-e $vf){
+  open(V,$vf);
+  my $tv=<V>;
+  chomp $tv;
+  if ($tv eq $version){
+    print "Bootstrap up to date\n";
+    exit;
+  }
+}
+
+system("apt-get update");
 
 # Format and mount in /vdb as data
-if ( -e "/dev/vdb" ){
-# Format data
+# TODO: Maybe make these options?
+my $mpt="/data";
+my $dev="/dev/vdb";
+if ( -e $dev ){
   my $doformat=1;
   open(M,"/proc/mounts");
   while(<M>){
-    $doformat=0 if /\/data/;
+    $doformat=0 if \/data/;
   }
 
-  system("[ -e /sbin/mkfs.xfs ] ||  apt-get -y install xfsprogs");
+  my $xfs="/sbin/mkfs.xfs";
+  add_package("xfsprogs",$xfs);
 
+  # Format data and mount
   if ($doformat) {
-    mysystem("mkfs -t xfs /dev/vdb");
-    mkdir "/data" unless -e "/data";
-    mysystem("mount /dev/vdb /data");
-    mkdir "/data";
+    mysystem("mkfs -t xfs $dev");
+    mkdir "$mpt" unless -e "$mpt";
+    mysystem("mount $dev $mpt");
   }
   else{
-    print "/data mounted\n" if $debug;
+    print "$mpt mounted\n" if $debug;
   }
 }
 
+# 
+mkdir "/kb" unless -e "/kb";
 
-# Add kbase keys to kbase account
-system("id $user > /dev/null || useradd -m $user -u $id");
-my $ak="/home/$user/.ssh/authorized_keys";
-`grep jenkins\@jworker $ak > /dev/null 2>&1`;
-if ( $? ) {
-  print "Add key";
-  mkdir "/home/$user/.ssh" unless -e "/home/$user/.ssh";
-  open A,">> $ak";
-  print A 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCy80/7oia9zmrntRS5pGNKihSj7gGKp6Q9HakGnRL+8jKYckZXmrBXiAYWqSrbVpiGsRmWs6zQnPK8jayFUHQg8/tG6NcvXiFlLBun7fV+yQV6F70rCWb3qt6O+2CRiNNXV1OkIoBfoefW4jcOtwueVbjafl7kuqj4icFNEbz+ThJkWimEHRiLTTtzbXUZ/QmuQUr0zDBWFAeoM9gu/ix4p/VGoxY70utpKqWuBlv/rHp+f4/Zxx/9eQobH3ywyHTmpjJQv2oejyNRxEBNEC1rlbTSJuFtIjqbJLk7Jyjb4rObXrNIkNkWnddPKmmpHrgcYrF2oe/ExHmcu+GFU0up jenkins@jworker01'."\n";
-  close A;
+# TODO: Some type of package list.  Could use kb_bootstrap too.
+add_package("bzr cvs libcurl4-gnutls-dev mysql-client zip libdb5.1 libgd-dev");
+add_package("apache2");
+
+system("sed -i 's/yes/no/' /etc/xinetd.d/check_mk;/etc/init.d/xinetd restart");
+
+# Write version tag out
+open(V,"> $vf");
+print V "$version\n";
+close V;
+
+
+# Package add function
+sub add_package {
+  my $packagelist=shift;
+  my $test=shift;
+
+  return if (defined $test && -e $test);
+  system("$PIC $packagelist");
+
 }
-
-
-# Create a checkout of deploy_tools
-
-# Common dependencies that may be missing from image
-apt-get install -y bzr cvs libcurl4-gnutls-dev mysql-client libgd2-noxpm

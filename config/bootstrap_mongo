@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use Getopt::Std;
+use strict;
+
+my $cfg=read_config();
+
+# Bootstrap will:
+# - Install Mongo
+# - Copy in the config
+# - Do an rs.initiate
+# - Create the admin account and .mongorc
+# - Enable auth
+#
+
+if ( -e "/data/bootstrapped" ) {
+  print "Already Bootstrapped\n";
+  exit;
+}
+
+  # Add repo
+  if (! -e "/etc/apt/sources.list.d/mongodb.list" ){
+    mysystem("apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10","echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' > /etc/apt/sources.list.d/mongodb.list");
+  }
+  # Install Mongo
+  if (! -e "/usr/bin/mongo" ){
+    mysystem("apt-get update","apt-get -y install mongodb-org=2.6.7 mongodb-org-server=2.6.7");
+  }
+exit;
+
+  # Copy config files
+  mysystem("cp mongo.conf /etc/mongod.conf");
+  # Keyfile
+  #mysystem("cp mongodb-keyfile /data/mongodb/keyfile","chmod 600 /data/mongodb/keyfile","chown mongodb:mongodb /data/mongodb/keyfile");
+  mkdir "/data/mongodb" unless -e '/data/mongodb';
+  mysystem("chown mongodb /data/mongodb");
+
+# restart
+  mysystem("service mongod restart");
+
+  mysystem("echo 'rs.initiate();'|mongo|grep -v shell|grep -v connecting|grep ok");
+  sleep(10);
+
+# Add admin account and create a .mongorc file
+#
+  my $user=$cfg->{services}->{mongo}->{user};
+  my $pwd=$cfg->{services}->{mongo}->{pwd};
+  if ( ! -e "/root/.mongorc.js"){
+    adduser('admin',$user,$pwd, "[\"userAdminAnyDatabase\",\"root\"]");
+    open(RC,"> /root/.mongorc.js");
+    print RC "db = db.getSiblingDB('admin')\n";
+    print RC "db.auth('$user','$pwd')\n";
+    close RC;
+    open(MC,">> /etc/mongod.conf");
+    print MC "auth = true\n";
+    close MC;
+    mysystem("service mongod restart");
+  }
+
+open(T,">/data/bootstrapped");
+print T "done\n";
+close T;

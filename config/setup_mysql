@@ -9,11 +9,9 @@ use strict;
 my %opt;
 my $force=0;
 my $dryrun=0;
-my $bootstrap=0;
 
-getopts('nfb',\%opt);
+getopts('nf',\%opt);
 $dryrun=1 if defined $opt{n};
-$bootstrap=1 if defined $opt{b};
 $force=1 if defined $opt{f};
 
 my $debug=0;
@@ -27,8 +25,6 @@ my $adminpass='--user root';
 if (defined $cfg->{services}->{$me}->{'adminpass'}){
   $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};
 };
-
-bootstrap() if $bootstrap;
 
 my %userexist;
 my %dbexist;
@@ -116,41 +112,3 @@ sub add_user {
 #  print "$mycom";
 }
 
-sub bootstrap {
-  # Install Maria
-
-  my $vers=`mysql -V`;
-
-  if (! $vers=~/MariaDB/){
-    mysystem("apt-get -y install python-software-properties");
-    mysystem("apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db");
-    mysystem("add-apt-repository 'deb http://ftp.osuosl.org/pub/mariadb/repo/5.5/ubuntu precise main'");
-    mysystem("apt-get -y update; apt-get -y install mariadb-server");
-  }
-  else{
-    print "MariaDB Installed\n" if $debug;
-  }
-
-
-  # Format data
-  my $doformat=1;
-  open(M,"/proc/mounts");
-  while(<M>){
-    $doformat=0 if /\/data/;
-  }
-
-  mysystem("[ -e /sbin/mkfs.xfs ] ||  apt-get -y install xfsprogs");
-
-  if ($doformat) {
-    die "Missing /dev/vdb" unless -e "/dev/vdb";
-    mysystem("mkfs -t xfs /dev/vdb");
-    mkdir "/data" unless -e "/data";
-    mysystem("mount /dev/vdb /data");
-    mkdir "/data/mysql";
-    mysystem("chown mysql /data/mysql");
-  }
-  else{
-    print "/data mounted\n" if $debug;
-  }
-  exit;
-}
