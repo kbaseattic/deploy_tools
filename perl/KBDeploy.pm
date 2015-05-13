@@ -102,6 +102,9 @@ sub myservices {
     chomp $me;
   }
   my @sl;
+  if (defined $ENV{'MYSERVICES'}){
+    return split /,/,$ENV{'MYSERVICES'};
+  }
   for my $s (@{$cfg->{servicelist}}){
     next unless defined $cfg->{services}->{$s}->{host};
     push @sl,$s if ($cfg->{services}->{$s}->{host} eq $me);
@@ -672,7 +675,7 @@ sub auto_deploy {
   generate_autodeploy($ad);
 
   kblog "Running auto deploy\n";
-  mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad >> $LOGFILE 2>&1");
+  mysystem(". $KB_DC/user-env.sh;perl auto-deploy $ad "); #>> $LOGFILE 2>&1");
 }
 
 #
@@ -682,6 +685,7 @@ sub deploy_service {
   my $hashfile=shift;
   my $dryrun=shift;
   my $force=shift;
+  my $start=shift;
 
   my @sl=myservices();
   
@@ -702,10 +706,10 @@ sub deploy_service {
     return -4;
   }
 
-  stop_service(@sl);
+  stop_service(@sl) if (defined $start && $start eq 1);
   auto_deploy(@sl);
   postprocess(@sl);
-  start_service(@sl);
+  start_service(@sl) if (defined $start && $start eq 1);
   mark_complete(@sl);
   return 0;
 }

@@ -14,14 +14,18 @@ getopts('nf',\%opt);
 $dryrun=1 if defined $opt{n};
 $force=1 if defined $opt{f};
 
-my $debug=0;
+my $debug=1;
 
 my $cfg=read_config();
 
 my @sl=myservices();
 my $me=$sl[0];
+my $adminhost='';
 my $adminpass='--user root';
 
+if (defined $cfg->{services}->{$me}->{'adminhost'}){
+  $adminhost='--host='.$cfg->{services}->{$me}->{'adminhost'};
+};
 if (defined $cfg->{services}->{$me}->{'adminpass'}){
   $adminpass='--password='.$cfg->{services}->{$me}->{'adminpass'};
 };
@@ -69,12 +73,12 @@ exit if $dryrun;
 open(L,"ls *.sql 2>/dev/null|");
 while (<L>){
   chomp;
-  mysystem("cat *.sql|mysql $adminpass");
+  mysystem("cat *.sql|mysql $adminhost $adminpass");
 }
 close L;
 
 sub getusers {
-  open(U,"echo 'select User from user'|mysql $adminpass mysql|");
+  open(U,"echo 'select User from user'|mysql $adminhost $adminpass mysql|");
   while(<U>){
     chomp;
     $userexist{$_}=1;
@@ -82,7 +86,7 @@ sub getusers {
 }
 
 sub getdbs {
-  open(U,"echo 'show DATABASES'|mysql $adminpass mysql|");
+  open(U,"echo 'show DATABASES'|mysql $adminhost $adminpass mysql|");
   while(<U>){
     chomp;
     $dbexist{$_}=1;
@@ -101,7 +105,7 @@ sub add_user {
     return;
   }
   $perm='SELECT' if (! defined $perm);
-  open(MY,"|mysql $adminpass");
+  open(MY,"|mysql $adminhost $adminpass");
   printf MY "CREATE USER '%s'\@'%%' IDENTIFIED BY '%s';\n",$user,$pass unless $userexist{$user};
   $userexist{$user}=1;
   printf MY "CREATE DATABASE %s;\n",$db unless $dbexist{$db};

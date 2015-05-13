@@ -1,0 +1,11 @@
+--- authorization_server/authorization_server/settings.py.orig     2015-05-13 02:20:14.903919669 +0000
++++ authorization_server/authorization_server/settings.py  2015-05-13 02:11:03.260831164 +0000
+@@ -133,7 +133,7 @@
+     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
+     # Always use forward slashes, even on Windows.
+     # Don't forget to use absolute paths, not relative paths.
+-    os.path.join(SITE_ROOT,'templates')
++    os.path.join(SITE_ROOT,'templates'),
+ )
+ 
+ INSTALLED_APPS = (

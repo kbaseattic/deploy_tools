@@ -1,0 +1,32 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use Getopt::Std;
+use Config::IniFiles;
+use strict;
+use MongoDB;
+
+my %opt;
+
+my $hashfile;
+$hashfile=shift;
+
+my $cfg=read_config();
+
+my $mcfg=$cfg->{services}->{Workspace};
+
+my $client     = MongoDB::MongoClient->new(host => $mcfg->{'mongodb-host'}, port => 27017);
+$client->authenticate($mcfg->{'mongodb-database'},$mcfg->{'mongodb-user'},$mcfg->{'mongodb-pwd'});
+my $database   = $client->get_database( $mcfg->{'mongodb-database'} );
+my $collection = $database->get_collection( 'settings' );
+
+my $settings={};
+
+$settings->{'type_db'}='wstypes';
+$settings->{'backend'}='shock';
+$settings->{'shock_location'}=$mcfg->{'shock-url'};
+$settings->{'shock_user'}=$mcfg->{'shock-user'};
+$collection->update({}, $settings, {'upsert'=>1});
+$collection->find_one();

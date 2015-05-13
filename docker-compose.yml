@@ -1,0 +1,66 @@
+www:
+  environment:
+    MYSERVICES: www
+  image: kbase/depl:1.0.1
+  ports:
+   - 8888:80
+  links:
+   - shock
+   - handleservice
+   - narrative
+   - authorization
+   - handlemngr 
+   - ws 
+  command: /usr/sbin/nginx
+authorization:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7039
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: authorization
+shock:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7044
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: shock
+handleservice:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7109
+  links:
+   - shock
+  external_links:
+   - mysql
+  environment:
+    MYSERVICES: handle_service
+handlemngr:
+  image: kbase/depl:1.0.1
+  expose:
+   - 9001
+  links:
+   - handleservice
+  environment:
+    MYSERVICES: HandleMngr
+ws:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7058
+  links:
+   - shock
+   - handlemngr
+   - handleservice
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: Workspace
+narrative:
+  image: kbase/depl:1.0.1
+  environment:
+    MYSERVICES: narrative
+  links:
+   - shock

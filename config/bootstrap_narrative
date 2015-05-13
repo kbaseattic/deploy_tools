@@ -40,7 +40,7 @@ mysystem("npm install -g grunt-cli");
 
 mysystem("usermod www-data -G docker");
 mysystem("restart docker.io");
-mysystem("/etc/init.d/apache2 stop");
+mysystem("/etc/init.d/apache2 stop || echo Ignore");
 
 
 sub add_package {

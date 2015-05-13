@@ -13,15 +13,24 @@ my $verbose=0;
 my %opt;
 my $dry_run=0;
 my $force=0;
+my $autostart=1;
 my $defcfgfile='/cluster.ini';
 my $cfgfile=$FindBin::Bin.'/'.$defcfgfile;
-getopts('nvfc:', \%opt);    # -o, -D & -I take arg.  Sets $opt_* as a side effect.
+getopts('nvfdsc:', \%opt);
+
+# -n dry_run
+# -v verbose
+# -f force
+# -d debug
+# -s skip autostart
+# -c <file> config file option 
 
 $dry_run=1 if (defined $opt{n});
 $force=1 if (defined $opt{f});
 $debug=1 if (defined $opt{d});
 $verbose=1 if (defined $opt{v});
 $cfgfile=$opt{c} if (defined $opt{c});
+$autostart=0 if (defined $opt{s});
 
 my $cfg=read_config($cfgfile);
 my $global=$cfg->{global};
@@ -299,7 +308,7 @@ sub deploy_services{
          # TODO: replace with a module call
          if ($script eq 'setup_service'){
            print " - Running built-in deploy_service\n";
-           KBDeploy::deploy_service($hashfile,$dry_run,$force);
+           KBDeploy::deploy_service($hashfile,$dry_run,$force,$autostart);
          }
          else{
            mysystem("cd $basedir/config;./$script $opts $hashfile");

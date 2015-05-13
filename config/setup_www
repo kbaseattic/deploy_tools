@@ -53,6 +53,7 @@ while(<T>){
   printserv($new,1) if (/\%SSLINCLUDE/);
 }
 close N;
+exit if defined $ENV{'NOSTART'};
 print `sudo /etc/init.d/nginx configtest`;
 my $status=$?;
 # TODO: if configtest fails then revert
@@ -76,6 +77,7 @@ sub printserv{
      }
      else{
        proxy($new,$s,$sc) if ! defined $sc->{proxytype};
+       fastcgi($new,$s,$sc) if $sc->{proxytype} eq 'fastcgi';
        docs($new,$s,$sc);
        mkdir "/kb/docs/services/$s";
        mkdir "/kb/docs/services/docs/$sc->{basedir}";
