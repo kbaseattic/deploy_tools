@@ -70,6 +70,7 @@ mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|
 print "Replacing narrative in ui-common\n";
 mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "skip"');
 
+exit if defined $ENV{'SKIPNAR'};
 # Build docker
 chdir "$DC/modules/narrative" or die "Unable to change dir";
 print "Replacing kbase in narrative $DC/narrative\n";

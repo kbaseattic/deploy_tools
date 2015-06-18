@@ -3,7 +3,8 @@ www:
     MYSERVICES: www
   image: kbase/depl:1.0.1
   ports:
-   - 8888:80
+   - 8080:80
+   - 8443:443
   links:
    - shock
    - handleservice
@@ -11,6 +12,12 @@ www:
    - authorization
    - handlemngr 
    - ws 
+   - narrativemethodstore
+   - ujs
+   - awe
+   - njswrapper
+   - narrativejobservice
+   - transform
   command: /usr/sbin/nginx
 authorization:
   image: kbase/depl:1.0.1
@@ -20,6 +27,15 @@ authorization:
    - mongo
   environment:
     MYSERVICES: authorization
+awe:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7107
+   - 7108
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: awe
 shock:
   image: kbase/depl:1.0.1
   expose:
@@ -28,6 +44,8 @@ shock:
    - mongo
   environment:
     MYSERVICES: shock
+  volumes:
+   - /data/docker/shock:/mnt/Shock
 handleservice:
   image: kbase/depl:1.0.1
   expose:
@@ -58,9 +76,59 @@ ws:
    - mongo
   environment:
     MYSERVICES: Workspace
+narrativemethodstore:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7125
+  environment:
+    MYSERVICES: NarrativeMethodStore
+ujs:
+  image: kbase/depl:1.0.1
+  expose:
+   - 7083
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: UserAndJobState
+njswrapper:
+  image: kbase/depl:1.0.1
+  #queue.db.dir=/tmp/njs/queue
+  links:
+   - ujs
+   - ws
+   - narrativejobservice
+  expose:
+   - 8200
+  environment:
+    MYSERVICES: NarrativeJobService
+narrativejobservice:
+  image: kbase/depl:1.0.1
+  links:
+   - ws
+   - awe
+   - shock
+  expose:
+   - 7080
+  environment:
+    MYSERVICES: NarrativeJobService
 narrative:
   image: kbase/depl:1.0.1
+  ports:
+   - 9080:80
+   - 9443:443
   environment:
-    MYSERVICES: narrative
+    MYSERVICES: narrativex
+  volumes:
+   - /var/run/docker.sock:/var/run/docker.sock 
+   - /dev/log:/dev/log
+transform:
+  image: kbase/depl:1.0.1
   links:
    - shock
+   - ujs
+   - ws
+   - awe
+  expose:
+   - 7778
+  environment:
+    MYSERVICES: Transform

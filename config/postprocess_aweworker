@@ -49,8 +49,9 @@ foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
   $mcfg->WriteConfig($out) or die "Unable to write $file";
 }
 
-mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
-mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
+my $sdir="$KB_DEPLOY/services/awe_service/";
+mysystem("cp $sdir/start_aweclient $sdir/start_service");
+mysystem("cp $sdir/stop_aweclient $sdir/stop_service");
 
 # May not be needed anymore.  Check.
 mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
