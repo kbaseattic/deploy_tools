@@ -140,7 +140,7 @@ sub read_config {
    $global->{basename}="bogus";
    $global->{hashfile}="githashes";
    $global->{runtime}="/usr";
-   $global->{'make-options'}="";
+   $global->{'make-options'}='DEPLOY_RUNTIME=$KB_RUNTIME ANT_HOME=$KB_RUNTIME/ant';
    $global->{'default-modules'}="kbapi_common,typecomp,jars,auth";
    $defaults->{'setup'}='setup_service';
    $defaults->{'auto-deploy-target'}='deploy';
@@ -530,6 +530,8 @@ sub mkhashfile {
     if (defined $hashes{$rname} && $tag ne $hashes{$rname}){
       print STDERR "You have two services that map to the same reponame,\n";
       print STDERR "yet result in different hashes. Please correct.\n";
+      print STDERR "- $service: $tag\n";
+      print STDERR "- $rname: $hashes{$rname}\n";
       print STDERR "Failing mkhashfile.\n";
       return 0;
     }
