@@ -1,0 +1,11 @@
+#!/bin/sh
+IMAGE=kbase/depl:1.0
+
+# We need to run this in a container so we don't have to replicate the build environment for the narrative
+# We pass through the docker socket because it will need to build other images.
+#
+docker run -it --rm \
+	--hostname narrative \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	--entrypoint perl \
+	$IMAGE ./config/postprocess_narrative

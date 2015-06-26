@@ -1,7 +1,7 @@
 www:
   environment:
     MYSERVICES: www
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   ports:
    - 8080:80
    - 8443:443
@@ -18,9 +18,10 @@ www:
    - njswrapper
    - narrativejobservice
    - transform
+   - userprofile
   command: /usr/sbin/nginx
 authorization:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7039
   external_links:
@@ -28,7 +29,7 @@ authorization:
   environment:
     MYSERVICES: authorization
 awe:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7107
    - 7108
@@ -37,7 +38,7 @@ awe:
   environment:
     MYSERVICES: awe
 shock:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7044
   external_links:
@@ -47,7 +48,7 @@ shock:
   volumes:
    - /data/docker/shock:/mnt/Shock
 handleservice:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7109
   links:
@@ -57,7 +58,7 @@ handleservice:
   environment:
     MYSERVICES: handle_service
 handlemngr:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 9001
   links:
@@ -65,7 +66,7 @@ handlemngr:
   environment:
     MYSERVICES: HandleMngr
 ws:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7058
   links:
@@ -77,13 +78,13 @@ ws:
   environment:
     MYSERVICES: Workspace
 narrativemethodstore:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7125
   environment:
     MYSERVICES: NarrativeMethodStore
 ujs:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   expose:
    - 7083
   external_links:
@@ -91,7 +92,7 @@ ujs:
   environment:
     MYSERVICES: UserAndJobState
 njswrapper:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   #queue.db.dir=/tmp/njs/queue
   links:
    - ujs
@@ -102,7 +103,7 @@ njswrapper:
   environment:
     MYSERVICES: NarrativeJobService
 narrativejobservice:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   links:
    - ws
    - awe
@@ -112,7 +113,7 @@ narrativejobservice:
   environment:
     MYSERVICES: NarrativeJobService
 narrative:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   ports:
    - 9080:80
    - 9443:443
@@ -122,7 +123,7 @@ narrative:
    - /var/run/docker.sock:/var/run/docker.sock 
    - /dev/log:/dev/log
 transform:
-  image: kbase/depl:1.0.1
+  image: kbase/depl:1.0
   links:
    - shock
    - ujs
@@ -132,3 +133,11 @@ transform:
    - 7778
   environment:
     MYSERVICES: Transform
+userprofile:
+  image: kbase/depl:1.0
+  expose:
+   - 7126
+  external_links:
+   - mongo
+  environment:
+    MYSERVICES: UserProfile

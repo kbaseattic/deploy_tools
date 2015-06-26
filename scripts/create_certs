@@ -1,0 +1,25 @@
+#!/bin/sh
+
+[ -e ./ssl ] || mkdir ./ssl
+
+# Create certs for development deploy
+if [ -e ./ssl/proxy.key ] ; then
+  echo "Skipping proxy cert"
+else
+  openssl genrsa -des3 -out server.key -passout pass:temp 2048
+  openssl req -batch -config openssl.cnf -new -passin pass:temp -key server.key -out server.csr
+  openssl x509 -req -days 365 -passin pass:temp -in server.csr -signkey server.key -out ./ssl/proxy.crt
+  openssl rsa -passin pass:temp -in server.key -out ./ssl/proxy.key
+  rm server.csr server.key
+fi
+  
+if [ -e ./ssl/narrative.key ] ; then
+  echo "Skipping narrative cert"
+else
+  openssl genrsa -des3 -out server.key -passout pass:temp 2048
+  openssl req -batch -config openssl.cnf -new -passin pass:temp -key server.key -out server.csr
+  openssl x509 -req -days 365 -passin pass:temp -in server.csr -signkey server.key -out ./ssl/narrative.crt
+  openssl rsa -passin pass:temp -in server.key -out ./ssl/narrative.key
+  rm server.csr server.key
+fi
+

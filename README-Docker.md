@@ -1,12 +1,16 @@
 # Deploying with docker
 
+## Create self-signed certs or copy in certs to ./ssl
+
+    ./scripts/create_certs
+
 ## Build images
 
-Make sure kbase/rtmin is available. This is provide by a branch in the bootstrap repo.)
+Make sure kbase/rtmin is available. This is provide by a branch in the bootstrap repo.
 
+    docker build -t kbase/deplbase:1.0 -f Dockerfile.base .
     docker build -t kbase/depl:1.0 .
-    docker build -t kbase/depl:1.0.1 -f Dockerfile.depl .
-    docker run -it --rm --hostname narrative -v /var/run/docker.sock:/var/run/docker.sock --entrypoint perl kbase/depl:1.0.1 ./config/postprocess_narrative
+    ./scripts/build_narrative
 
 ## Start Base services
 
@@ -17,8 +21,8 @@ Start Mongo and mysql
 
 ## Initialize Databases
 
-    docker run --rm -it --link mysql:mysql --entrypoint perl --env MYSERVICES=mysql kbase/depl:1.0.1  ./config/setup_mysql
-    docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo kbase/depl:1.0.1  (run ./config/setup_mongo)
+    ./scripts/setup_mysql
+    ./scripts/setup_mongo
 
 ## Start services
 
@@ -28,7 +32,7 @@ Use Docker Compose to start things up.
 
 ## Start workers
 
-Create environment file.
+Create environment file called .awenv.
 
 
     ADMIN_PASS=<password>
@@ -40,6 +44,16 @@ Save this to .awenv and start a worker.
 
     docker run -it --rm --env-file=.awenv --link deploytools_awe_1:awe --link deploytools_www_1:www kbase/depl:1.0.1
 
+
+## Start Narrative Proxy Engine
+
+    ./scripts/start_narrative
+
+## Starting a client container:
+
+There is a helper script to start a client container.  It will run as your user id using your home directory.
+
+    ./scripts/client.sh
 
 #Debugging Tips
 
@@ -61,6 +75,3 @@ Web Proxy:
 
     docker exec deploytools_www_1 cat /var/log/nginx/error.log^C
 
-Starting a client container:
-
-    docker run -it --rm --user $(id -u) --name client --workdir $HOME --volume $HOME:$HOME --env HOME=$HOME --link deploytools_www_1:www --entrypoint bash kbase/depl:1.0.1

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+IMAGE=kbase/depl:1.0
+WWW=$(docker-compose ps|grep _www_|awk '{print $1}')
+AWE=$(docker-compose ps|grep _awe_|awk '{print $1}')
+
+docker run -d \
+	--env-file=.awenv \
+	--link $AWE:awe \
+	--link $WWW:www \
+	$IMAGE

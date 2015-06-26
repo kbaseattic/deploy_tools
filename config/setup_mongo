@@ -16,6 +16,12 @@ $force=1 if defined $opt{f};
 
 my $debug=0;
 
+my $host='';
+
+if (defined $ENV{'MONGO_HOST'}){
+  $host="$ENV{'MONGO_HOST'}/local";
+}
+
 
 my $cfg=read_config();
 
@@ -48,12 +54,12 @@ for my $s (keys %{$cfg->{services}}){
 sub adduser {
   my ($db,$user,$pwd,$roles)=@_;
   # TODO: Add some type of check
-  my $com="use $db;\ndb.createUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
+  my $com="use $db;\ndb.addUser( { user: \"$user\", pwd: \"$pwd\", roles: $roles })\n";
   if ($dryrun){
     print "- Add $user.  Skipping for dry run\n";
   }
   else {
-    mysystem("echo '$com'|mongo|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
+    mysystem("echo '$com'|mongo $host|grep -v 'exists'|grep -v bye|grep -v connecting|grep -v shell");
   }
 }
 

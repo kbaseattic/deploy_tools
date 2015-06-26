@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ -z $MYSERVICES ] ; then
+  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --volume `pwd`:/tmp/dt kbase/depl:1.0 /tmp/dt/scripts/setup_mongo
+else
+  if [ ! -e "/usr/bin/mongo" ] ; then
+    sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+    echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+    apt-get update
+    apt-get install -y mongodb-10gen=2.4.14
+  fi
+
+  export MONGO_HOST=mongo
+  /tmp/dt/config/setup_mongo
+fi

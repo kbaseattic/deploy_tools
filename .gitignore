@@ -6,3 +6,5 @@ deployment.cfg
 config/gitkey
 tagfile*
 local/
+.awenv
+ssl

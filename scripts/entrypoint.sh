@@ -2,23 +2,21 @@
 
 if [ "$MYSERVICES" = "www" ] ; then
   echo "www"
-  openssl genrsa -des3 -out server.key -passout pass:temp 2048
-  openssl req -batch -config openssl.cnf -new -passin pass:temp -key server.key -out server.csr
-  openssl x509 -req -days 365 -passin pass:temp -in server.csr -signkey server.key -out server.crt
-  openssl rsa -passin pass:temp -in server.key -out server.key.insecure
   mkdir /etc/nginx/ssl
-  cp server* /etc/nginx/ssl
+  cp ./ssl/proxy.crt /etc/nginx/ssl/server.crt
+  cp ./ssl/proxy.key /etc/nginx/ssl/server.key.insecure
   /etc/init.d/nginx start
 elif [ "$MYSERVICES" = "narrative" ] ; then
   echo "narrative"
   SKIPNAR=1 ./config/postprocess_narrative 
-  sed -i 's/M.provision_count = 20/M.provision_count = 2/' proxy_mgr.lua /kb/dev_container/modules/narrative/docker/proxy_mgr.lua 
-  openssl genrsa -des3 -out server.key -passout pass:temp 2048
-  openssl req -batch -config openssl.cnf -new -passin pass:temp -key server.key -out server.csr
-  openssl x509 -req -days 365 -passin pass:temp -in server.csr -signkey server.key -out server.chained.crt
-  openssl rsa -passin pass:temp -in server.key -out server.key
+  # Use production auth since redeployed auth is broken
+  grep -rl authorization /kb/deployment/ui-common|xargs sed -i 's/\/\/[^/]*\/services\/authorization/\/\/kbase.us\/services\/authorization/'
+  # Dial back number of narratives
+  sed -i 's/M.provision_count = 20/M.provision_count = 2/' /kb/deployment/services/narrative/docker/proxy_mgr.lua 
+  # Certs
   mkdir /etc/nginx/ssl
-  cp server* /etc/nginx/ssl
+  cp ./ssl/narrative.crt /etc/nginx/ssl/server.chained.crt
+  cp ./ssl/narrative.key /etc/nginx/ssl/server.key
   groupmod -g 115 docker
   usermod -g 115 www-data
   /etc/init.d/nginx start
