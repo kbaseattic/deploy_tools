@@ -3,9 +3,17 @@
 IMAGE=kbase/depl:1.0
 WWW=$(docker-compose ps|grep _www_|awk '{print $1}')
 AWE=$(docker-compose ps|grep _awe_|awk '{print $1}')
+UJS=$(docker-compose ps|grep _ujs_|awk '{print $1}')
+SHOCK=$(docker-compose ps|grep _shock_|awk '{print $1}')
+CG=$(grep CGROUP .awenv|sed s'/.*=//')
 
-docker run -d \
+ARGS=" -d"
+
+docker run $ARGS \
+        --name aweworker_$CG \
 	--env-file=.awenv \
 	--link $AWE:awe \
 	--link $WWW:www \
+	--link $UJS:ujs \
+	--link $SHOCK:shock \
 	$IMAGE

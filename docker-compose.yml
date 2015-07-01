@@ -87,6 +87,8 @@ ujs:
   image: kbase/depl:1.0
   expose:
    - 7083
+  links:
+   - awe
   external_links:
    - mongo
   environment:
@@ -129,8 +131,11 @@ transform:
    - ujs
    - ws
    - awe
+   - handleservice
   expose:
    - 7778
+  volumes:
+   - /dev/log:/dev/log
   environment:
     MYSERVICES: Transform
 userprofile:

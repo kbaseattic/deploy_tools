@@ -1,7 +1,7 @@
 [global]
 xcatgroup=test
 basename=test
-baseurl=dev05.berkeley.kbase.us:8443
+baseurl=public.hostname.org:8443
 maxnodes=40
 disksize=20g
 repobase=https://github.com/kbase/
@@ -129,7 +129,7 @@ awe-url=http://awe:7107/
 server-threads=4
 min-memory=512
 max-memory=1000
-urlname=ujs
+urlname=userandjobstate
 service-port=7083
 host=ujs
 mem=4G
@@ -194,7 +194,7 @@ proxytype=skip
 
 [CompressionBasedDistance]
 shock_url=http://shock:7044/
-userandjobstate_url=http://ujs:7126/
+userandjobstate_url=http://ujs:7083/
 work_folder_path=/kbase/deployments/20140109-proCompressionBasedDistance/data
 num_pool_processes=5
 service-port=7102
@@ -289,7 +289,7 @@ proxytype=skip
 [probabilistic_annotation]
 pseudo_count=40
 cdmi_url=http://www/services/cdmi_api/
-userandjobstate_url=http://ujs:7126/
+userandjobstate_url=http://ujs:7083/
 fbamodelservices_url=http://www/services/fba_model_services/
 work_folder_path=/kbase/data/probabilistic_annotation/jobs
 blast_threads=1
@@ -392,7 +392,7 @@ proxytype=skip
 [CoExpression]
 host=CoExpression
 giturl=https://github.com/kbase/coexpression
-ujs_url=http://ujs:7126/
+ujs_url=http://ujs:7083/
 awe_url=http://awe:7107/
 shock_url=http://shock:7044/
 ws_url=http://ws:7058//
@@ -405,7 +405,7 @@ thread.count=4
 temp.dir=/scratch/genome_comparison
 blast.dir=/kb/deploymengenome_comparison/blast/linux
 ws.url=http://ws:7058//
-ujs.url=http://ujs:7126/
+ujs.url=http://ujs:7083/
 service-port=7123
 host=genomecomparison
 proxytype=skip
@@ -487,15 +487,17 @@ mongodb-user=wsserv
 [narrative]
 host=narrative
 service-port=7122
-service-url=https://narrative/
+service-url=https://public.hostname.org:6443/
 git-branch=staging
 deploy=ui-common
 auto-deploy-target=deploy-client
-awe-url=http://awe:7107/
-njs-url=http://www/services/narrative_job_service
-njsw-url=http://www/services/njs_wrapper
-njp-url=http://localhost:7068
+awe-url=https://public.hostname.org:8443/services/awe-api
+njs-url=https://public.hostname.org:8443/services/narrative_job_service
+njsw-url=https://public.hostname.org:8443/services/njs_wrapper
+njp-url=https://localhost:7068
+transform-url=https://public.hostname.org:8443/services/transform
 proxytype=skip
+example-wsid=1
 
 [uploader]
 type=lib
@@ -562,7 +564,7 @@ giturl=https://github.com/scanon/njs_wrapper
 scratch=/tmp/njs
 queue.db.dir=/tmp/njs/queue
 workspace.srv.url=http://ws:7058/
-jobstatus.srv.url=http://ujs:7126/
+jobstatus.srv.url=http://ujs:7083/
 njs.srv.url=http://narrativejobservice:7080/
 running.tasks.per.user=5
 ## It sets the number of jobs working in background,
@@ -614,7 +616,7 @@ port=7052
 [Transform]
 giturl=https://github.com/kbase/transform
 awe_url=http://awe:7107/
-ujs_url=http://ujs:7126/
+ujs_url=http://ujs:7083/
 shock_url=http://shock:7044/
 ws_url=http://ws:7058/
 clientgroups=dev
@@ -625,3 +627,19 @@ svc_ws_pw=password
 urlname=transform
 host=transform
 service-port=7778
+# logging details
+log_syslog = true
+log_file = transform_service.log
+# standard python logging levels are CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+log_level = DEBUG
+# the services that transform needs to communicate with
+awe_service_url=http://awe:7080/
+ujs_service_url=http://ujs:7083/
+workspace_service_url=http://ws:7058/
+shock_service_url=http://shock:7044/
+handle_service_url=http://handleservice:7109/
+fba_service_url=http://fba:7036/
+# top level directory to store files for tasks
+working_directory=/mnt/transform_working
+# where to find the plugin config files
+plugins_directory=plugins/configs

@@ -25,12 +25,13 @@ elif [ "$MYSERVICES" = "aweworker" ] ; then
   unset ADMIN_PASS
   AUTH="Authorization: OAuth $(grep token ~/.kbase_config|sed 's/token=//')";
   curl -s -X POST -H "$AUTH" http://awe:7107/cgroup/$CGROUP > /dev/null
-  TOK=$(curl -s -H "$AUTH" http://awe:7107/cgroup/|python -mjson.tool|grep token|sed 's/.*name=/name=/'|sed 's/"//')
+  TOK=$(curl -s -H "$AUTH" http://awe:7107/cgroup/|python -mjson.tool|sed 's/ /\n/'|grep $CGROUP|grep token|sed 's/.*name=/name=/'|sed 's/"//')
   sed -i "s/replacetoken/$TOK/" cluster.ini
   ./config/postprocess_aweworker
   ./deploy_cluster start
 else
   [ -e /mnt/Shock/data ] || mkdir /mnt/Shock/data /mnt/Shock/site /mnt/Shock/logs
+  [ -e /mnt/transform_working ] || mkdir /mnt/transform_working
   ./deploy_cluster start
 fi
 

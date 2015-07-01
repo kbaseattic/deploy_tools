@@ -21,13 +21,16 @@ RUN  git config --global user.email "user@kbase.us";git config --global user.nam
 # - Deploy the nginx config (setup_www)
 # - Run postporcess for shock and awe
 # - Clones special versions of ui-common and narrative
+#	cd modules/auth_service;cat /root/dt/auth.fix |patch -p0;make deploy;\
 RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
-	cd /kb/dev_container/;. ./user-env.sh;cd modules/auth_service;cat /root/dt/auth.fix |patch -p0;make deploy;cd /root/dt; \
+	cd /kb/dev_container/;. ./user-env.sh;\
+	cd /root/dt; \
 	sed -i 's/10000/256/' /kb/deployment/services/workspace/start_service && \
 	sed -i 's/15000/384/' /kb/deployment/services/workspace/start_service && \
 	cd config;NOSTART=1 MYSERVICES=www ./setup_www;cd ../;\
 	./config/postprocess_shock;\
 	./config/postprocess_awe;\
+	MYSERVICES=Transform ./config/postprocess_Transform;\
 	mkdir /mnt;mkdir /mnt/Shock;\
 	mkdir /mnt/Shock/logs;\
         cd /kb/dev_container/modules;\
