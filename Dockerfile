@@ -30,6 +30,7 @@ RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
 	cd config;NOSTART=1 MYSERVICES=www ./setup_www;cd ../;\
 	./config/postprocess_shock;\
 	./config/postprocess_awe;\
+        sed -i 's/ssl_verify = True/ssl_verify = False/' /kb/deployment/lib/biokbase/Transform/script_utils.py;\
 	MYSERVICES=Transform ./config/postprocess_Transform;\
 	mkdir /mnt;mkdir /mnt/Shock;\
 	mkdir /mnt/Shock/logs;\
