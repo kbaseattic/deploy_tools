@@ -30,6 +30,7 @@ Start Mongo and mysql
 
     ./scripts/setup_mysql
     ./scripts/setup_mongo
+    ./scripts/setup_shock
     ./scripts/setup_Workspace
     ./scripts/setup_wstypes    
 

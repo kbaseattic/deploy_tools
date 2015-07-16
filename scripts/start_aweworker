@@ -1,15 +1,16 @@
 #!/bin/sh
 
 IMAGE=kbase/depl:1.0
-WWW=$(docker-compose ps|grep _www_|awk '{print $1}')
-AWE=$(docker-compose ps|grep _awe_|awk '{print $1}')
-UJS=$(docker-compose ps|grep _ujs_|awk '{print $1}')
-WS=$(docker-compose ps|grep _ws_|awk '{print $1}')
-HS=$(docker-compose ps|grep _handleservice_|awk '{print $1}')
-SHOCK=$(docker-compose ps|grep _shock_|awk '{print $1}')
+#WWW=$(docker ps|grep _www_|awk '{print $1}')
+AWE=$(docker ps|grep _awe|awk '{print $1}')
+#UJS=$(docker ps|grep _ujs|awk '{print $1}')
+#WS=$(docker-ps|grep _ws|awk '{print $1}')
+#HS=$(docker ps|grep _handleservice|awk '{print $1}')
+#SHOCK=$(docker ps|grep _shock|awk '{print $1}')
 CG=$(grep CGROUP .awenv|sed s'/.*=//')
 
 ARGS=" -d"
+#ARGS=" -it --rm --entrypoint bash"
 
 docker kill aweworker_$CG
 docker rm aweworker_$CG
@@ -17,10 +18,11 @@ docker rm aweworker_$CG
 docker run $ARGS \
         --name aweworker_$CG \
 	--env-file=.awenv \
+        --volume `pwd`/.awenv:/root/dt/.awenv \
 	--link $AWE:awe \
-	--link $WWW:www \
-	--link $UJS:ujs \
-	--link $WS:ws \
-	--link $HS:handleservice \
-	--link $SHOCK:shock \
 	$IMAGE
+#	--link $WWW:www \
+#	--link $UJS:ujs \
+#	--link $WS:ws \
+#	--link $HS:handleservice \
+#	--link $SHOCK:shock \

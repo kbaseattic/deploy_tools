@@ -1,4 +1,4 @@
-CREATE DATABASE hsi;
+#CREATE DATABASE hsi;
 USE hsi;
 CREATE TABLE IF NOT EXISTS Handle (
         hid         int NOT NULL AUTO_INCREMENT,
