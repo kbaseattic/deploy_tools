@@ -7,5 +7,6 @@ IMAGE=kbase/depl:1.0
 docker run -it --rm \
 	--hostname narrative \
 	-v /var/run/docker.sock:/var/run/docker.sock \
+        --env MOVEBUILD=1 \
 	--entrypoint perl \
 	$IMAGE ./config/postprocess_narrative

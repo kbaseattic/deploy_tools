@@ -1,8 +1,15 @@
 # Deploying with docker
 
-## Create self-signed certs or copy in certs to ./ssl
+## Create a site config.  Create self-signed certs or copy in certs to ./ssl.  Create the config from the docker template.
 
+    cp site.cfg.example site.cfg
+    edit site.cfg
     ./scripts/create_certs
+    ./scripts/generate_config
+
+## Create a tag file for the versions
+
+    ./deploy_cluster mkhashfile tagfile
 
 ## Build images
 
@@ -23,12 +30,21 @@ Start Mongo and mysql
 
     ./scripts/setup_mysql
     ./scripts/setup_mongo
+    ./scripts/setup_Workspace
+    ./scripts/setup_wstypes    
 
 ## Start services
 
-Use Docker Compose to start things up.
+Use Docker Compose to start things up or use the kbrouter.
 
     docker-compose up
+
+Or
+    git clone https://github.com/KBaseIncubator/kbrouter
+    cd kbrouter
+    cp ../cluster.ini cluster.ini
+    docker-compose build
+    docker-compose up -d
 
 ## Start workers
 
@@ -42,7 +58,7 @@ Create environment file called .awenv.
 
 Save this to .awenv and start a worker.
 
-    docker run -it --rm --env-file=.awenv --link deploytools_awe_1:awe --link deploytools_www_1:www kbase/depl:1.0.1
+    ./scripts/start_aweworker
 
 
 ## Start Narrative Proxy Engine

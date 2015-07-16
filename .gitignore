@@ -8,3 +8,4 @@ tagfile*
 local/
 .awenv
 ssl
+site.cfg

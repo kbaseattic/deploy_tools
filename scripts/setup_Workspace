@@ -1,0 +1,9 @@
+#!/bin/sh
+
+if [ -z $MYSERVICES ] ; then
+  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --env PASSWD kbase/depl:1.0 ./$0
+else
+  echo "Runing post"
+  mv perl/List perl/List.dis
+  /kb/runtime/bin/perl ./config/postprocess_Workspace
+fi

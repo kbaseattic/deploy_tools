@@ -23,5 +23,17 @@ WORKDIR /root/dt
 ENV TARGET /kb/deployment
 ENV PATH ${TARGET}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ENV MYSERVICES=invocation
+RUN apt-get update
 RUN ./config/bootstrap_narrative
 RUN ./deploy_cluster -s deploy local tagfile
+
+# Make things run in the foreground and spit out logs -- hacky
+RUN \
+        sed -i 's/--daemonize [^ ]*log//' /kb/deployment/services/Transform/start_service;\
+        sed -i 's/--daemonize//' /kb/deployment/services/*/start_service;\
+        sed -i 's/--error-log [^ "]*//' /kb/deployment/services/*/start_service;\
+        sed -i 's/--pid [^ "]*//' /kb/deployment/services/*/start_service;\
+        sed -i 's/\/kb\/runtime\/sbin\/daemonize .*\/kb/\/kb/' /kb/deployment/services/*/start_service;\
+        sed -i 's/>.*//' /kb/deployment//services/*/start_service;\
+        sed -i 's/nohup //' /kb/deployment//services/*/start_service;\
+        sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm

@@ -38,4 +38,7 @@ RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
         git clone https://github.com/kbase/ui-common -b staging;\
         git clone https://github.com/scanon/narrative -b docker
 
+# We need to refix start
+RUN sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
+
 ENTRYPOINT ./scripts/entrypoint.sh

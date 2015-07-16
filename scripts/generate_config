@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ -e cluster.ini ] ; then
+  echo "cluster.ini already exist!"
+  exit
+fi
+
+. ./site.cfg
+
+cat cluster.ini.docker|\
+	sed "s/=kbaseuserid/=$USER/"| \
+	sed "s/=kbpassword/=$PASSWORD/"| \
+	sed "s/public.hostname.org/$PUBLIC/g" \
+	> cluster.ini

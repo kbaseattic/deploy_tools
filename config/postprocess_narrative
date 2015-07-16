@@ -98,7 +98,17 @@ if (defined $wsid) {
 
 # Now build
 print "Running buildNarrativeContainer\n";
-mysystem("sh ./buildNarrativeContainer.sh");
+if (defined $ENV{'MOVEBUILD'}){
+  chdir "$DC/modules";
+  mkdir "$DC/modules/build";
+  mysystem("mv narrative/ build/");
+  chdir "$DC/modules/build/narrative" or die "Unable to cd";
+  mysystem("sh ./buildNarrativeContainer.sh");
+  mysystem("mv $DC/modules/build/narrative $DC/modules/");
+}
+else{
+  mysystem("sh ./buildNarrativeContainer.sh");
+}
 
 # Logging
 # TODO: try to get this in a make file or something in the repo

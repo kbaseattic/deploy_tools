@@ -70,10 +70,10 @@ for my $s (keys %{$cfg->{services}}){
 }
 
 exit if $dryrun;
-open(L,"ls *.sql 2>/dev/null|");
+open(L,"ls *.sql config/*.sql 2>/dev/null|");
 while (<L>){
   chomp;
-  mysystem("cat *.sql|mysql $adminhost $adminpass");
+  mysystem("cat $_|mysql $adminhost $adminpass");
 }
 close L;
 
