@@ -36,21 +36,20 @@ Start Mongo and mysql
 
 ## Start services
 
-Use Docker Compose to start things up or use the kbrouter.
+Clone kbrouter and use it to start things up
 
-    docker-compose up
-
-Or
     git clone https://github.com/KBaseIncubator/kbrouter
     cd kbrouter
     cp ../cluster.ini cluster.ini
     docker-compose build
     docker-compose up -d
+    curl http://localhost:8080/services/shock-api
+    curl http://localhost:8080/services/awe-api
+    cd ..
 
 ## Start workers
 
 Create environment file called .awenv.
-
 
     ADMIN_PASS=<password>
     ADMIN_USER=<Kbase/globus username>
