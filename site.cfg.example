@@ -1,3 +1,10 @@
+# This is a username and password in the kbase site.  Request
+# the account at https://gologin.kbase.us/SignUp#
 USER=kbuserid
 PASSWORD=password
+
+# This should be a publicly accessible hostname for the server
 PUBLIC=public.hostname.org
+
+# If you change this you may need to update cluster.ini too
+IMAGE=kbase/depl:1.0

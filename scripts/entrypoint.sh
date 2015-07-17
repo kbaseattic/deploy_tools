@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ $# -gt 0 ] ; then
+  MYSERVICES=$1
+  shift
+fi
+
 if [ "$MYSERVICES" = "www" ] ; then
   echo "www"
   mkdir /etc/nginx/ssl
@@ -22,18 +27,23 @@ elif [ "$MYSERVICES" = "narrative" ] ; then
   GID=$(ls -n /var/run/docker.sock |awk '{print $4}')
   groupmod -g $GID docker
   usermod -g $GID www-data
-  /etc/init.d/nginx start
-  sleep 10000000000
+  sed -i 's/www-data;/www-data;\ndaemon off;/' /etc/nginx/nginx.conf
+  /usr/sbin/nginx
 elif [ "$MYSERVICES" = "aweworker" ] ; then
+  CGROUP=$1
+  [ -z $CGROUP ] && CGROUP=dev 
+  ADMIN_USER=$(grep awe-admin-user cluster.ini|sed 's/awe-admin-user=//')
+  ADMIN_PASS=$(grep awe-admin-password cluster.ini|sed 's/awe-admin-password=//')
+  URL=$(grep serverurl cluster.ini|sed 's/serverurl=//'|sed 's/\/$//')
   echo $ADMIN_PASS|kbase-login $ADMIN_USER
   unset ADMIN_PASS
   AUTH="Authorization: OAuth $(grep token ~/.kbase_config|sed 's/token=//')";
-  curl -s -X POST -H "$AUTH" http://awe:7107/cgroup/$CGROUP > /dev/null
-  TOK=$(curl -s -H "$AUTH" http://awe:7107/cgroup/|python -mjson.tool|sed 's/ /\n/'|grep $CGROUP|grep token|sed 's/.*name=/name=/'|sed 's/"//')
+  curl -s -X POST -H "$AUTH" ${URL}/cgroup/$CGROUP > /dev/null
+  TOK=$(curl -s -H "$AUTH" ${URL}/cgroup/|python -mjson.tool|sed 's/ /\n/'|grep $CGROUP|grep token|sed 's/.*name=/name=/'|sed 's/"//')
   sed -i "s/replacetoken/$TOK/" cluster.ini
   ./config/postprocess_aweworker
+  sed -i 's/\/kb\/runtime\/sbin\/daemonize.*PID_FILE//' /kb/deployment/services/awe_service/start_*
   ./deploy_cluster start
-  sleep 10000000000
 else
   [ -e /mnt/Shock/data ] || mkdir /mnt/Shock/data /mnt/Shock/site /mnt/Shock/logs
   [ -e /mnt/transform_working ] || mkdir /mnt/transform_working

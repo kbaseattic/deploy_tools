@@ -1,15 +1,27 @@
 # Deploying with docker
 
-## Create a site config.  Create self-signed certs or copy in certs to ./ssl.  Create the config from the docker template.
+## Create a site config.
 
     cp site.cfg.example site.cfg
     edit site.cfg
-    ./scripts/create_certs
-    ./scripts/generate_config
 
-## Create a tag file for the versions
+## Run the bootstrap script to start things up
+
+    ./scripts/bootstrap.sh
+
+# Detailed steps
+
+These steps are done by the bootstrap.  Advanced users may need to run some steps separately.
+
+## Create self-signed certs or copy in certs to ./ssl.  Create the config from the docker template.
+
+    ./scripts/generate_config
+    ./scripts/create_certs
+
+## Create a tag file for the versions.  This determines what version of services will be deployed.
 
     ./deploy_cluster mkhashfile tagfile
+
 
 ## Build images
 
@@ -28,11 +40,7 @@ Start Mongo and mysql
 
 ## Initialize Databases
 
-    ./scripts/setup_mysql
-    ./scripts/setup_mongo
-    ./scripts/setup_shock
-    ./scripts/setup_Workspace
-    ./scripts/setup_wstypes    
+    ./scripts/initialize.sh
 
 ## Start services
 
@@ -49,17 +57,9 @@ Clone kbrouter and use it to start things up
 
 ## Start workers
 
-Create environment file called .awenv.
-
-    ADMIN_PASS=<password>
-    ADMIN_USER=<Kbase/globus username>
-    CGROUP=dev
-    MYSERVICES=aweworker
-
-Save this to .awenv and start a worker.
+Start a worker.
 
     ./scripts/start_aweworker
-
 
 ## Start Narrative Proxy Engine
 

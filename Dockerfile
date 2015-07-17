@@ -41,4 +41,5 @@ RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
 # We need to refix start
 RUN sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
 
-ENTRYPOINT ./scripts/entrypoint.sh
+ENTRYPOINT [ "./scripts/entrypoint.sh" ]
+CMD [ ]

@@ -37,3 +37,16 @@ RUN \
         sed -i 's/>.*//' /kb/deployment//services/*/start_service;\
         sed -i 's/nohup //' /kb/deployment//services/*/start_service;\
         sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
+
+# Add URI::Dispatch for Invocation (can delete this later)
+RUN wget http://search.cpan.org/CPAN/authors/id/M/MN/MNF/URI-Dispatch-v1.4.1.tar.gz;\
+    tar xzf URI-Dispatch-v1.4.1.tar.gz;\
+    cd URI-Dispatch-v1.4.1; \
+    /kb/runtime/bin/perl ./Makefile.PL ; \
+    make; \
+    make install; \
+    cd ..; \
+    rm -rf URI-Dispatch-v1.4.1; \
+    yes|/kb/runtime/bin/cpan install Modern::Perl; \
+    /kb/runtime/bin/cpan install Ouch; \
+    /kb/runtime/bin/cpan install MooseX::Declare

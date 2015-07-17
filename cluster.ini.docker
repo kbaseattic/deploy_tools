@@ -104,6 +104,8 @@ host=aweworker
 group=test
 tokens=replacetoken
 serverurl=http://public.hostname.org:8080/services/awe-api/
+awe-admin-user=kbaseuserid
+awe-admin-password=kbpassword
 
 [cdmi_api]
 mem=24G

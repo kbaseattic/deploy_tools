@@ -1,8 +1,9 @@
 #!/bin/sh
+. ./site.cfg
+[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 HTTPS_PORT=6443
 HTTP_PORT=6080
-IMAGE=kbase/depl:1.0
 WWW=$(docker ps|grep _www_|awk '{print $1}'|head -1)
 
 echo $WWW

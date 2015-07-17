@@ -1,7 +1,9 @@
 #!/bin/sh
+. ./site.cfg
+[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 if [ -z $MYSERVICES ] ; then
-  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --env PASSWD kbase/depl:1.0 ./$0
+  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --env PASSWD $IMAGE ./$0
 else
   echo "Runing post"
   mv perl/List perl/List.dis

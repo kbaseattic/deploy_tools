@@ -3,7 +3,8 @@
 # Initialize Shock
 # On startup it ask some update questions.  This answer yes
 #
-IMAGE=kbase/depl:1.0
+. ./site.cfg
+[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 if [ -z $MYSERVICES ] ; then
   docker run -it --rm \

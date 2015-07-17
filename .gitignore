@@ -9,3 +9,5 @@ local/
 .awenv
 ssl
 site.cfg
+build.out
+initialize.out

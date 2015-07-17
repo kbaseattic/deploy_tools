@@ -1,7 +1,9 @@
 #!/bin/sh
+. ./site.cfg
+[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 if [ -z $MYSERVICES ] ; then
-  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --volume `pwd`:/tmp/dt kbase/depl:1.0 /tmp/dt/scripts/setup_mongo
+  docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --volume `pwd`:/tmp/dt $IMAGE /tmp/dt/$0
 else
   if [ ! -e "/usr/bin/mongo" ] ; then
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
