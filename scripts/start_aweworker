@@ -7,8 +7,8 @@ CG=dev
 ARGS=" -d"
 #ARGS=" -it --rm --entrypoint bash"
 
-docker kill aweworker_$CG
-docker rm aweworker_$CG
+docker kill aweworker_$CG > /dev/null 2>&1
+docker rm aweworker_$CG > /dev/null 2>&1
 
 curl -s  http://localhost:8080/services/awe-api > /dev/null
 

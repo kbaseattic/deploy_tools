@@ -90,6 +90,7 @@ if [ ! -e ../kbrouter ] ; then
 fi
 
 cp ./cluster.ini ../kbrouter/cluster.ini
+[ -e ../kbrouter/ssl/ ] || cp -a ssl/ ../kbrouter/
 
 echo "Buidling Router"
 (cd ../kbrouter;docker-compose build ) >> build.out
@@ -98,12 +99,14 @@ echo "Starting Router"
 (cd ../kbrouter;docker-compose up -d)
 echo "Waiting for router to start"
 sleep 5
+echo ""
 
 echo "Poking some services to start things up"
 curl -s http://localhost:8080/services/shock-api > /dev/null
 curl -s http://localhost:8080/services/awe-api > /dev/null
 curl -s http://localhost:8080/services/ws > /dev/null &
 curl -s http://localhost:8080/services/userandjobstate > /dev/null &
+curl -s http://localhost:8080/services/user_profile > /dev/null &
 
 echo "Starting awe worker"
 docker inspect mongo > /dev/null
