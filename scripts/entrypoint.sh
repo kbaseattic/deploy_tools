@@ -25,6 +25,7 @@ elif [ "$MYSERVICES" = "narrative" ] ; then
   cp ./ssl/narrative.crt /etc/nginx/ssl/server.chained.crt
   cp ./ssl/narrative.key /etc/nginx/ssl/server.key
   GID=$(ls -n /var/run/docker.sock |awk '{print $4}')
+  cat /etc/group|awk -F: '{if ($3=='$GID'){print "groupdel "$1}}'|sh
   groupmod -g $GID docker
   usermod -g $GID www-data
   sed -i 's/www-data;/www-data;\ndaemon off;/' /etc/nginx/nginx.conf

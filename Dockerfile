@@ -18,6 +18,7 @@ RUN  git config --global user.email "user@kbase.us";git config --global user.nam
 
 # This run command does several things including:
 # - Changing the memory size for the workspace
+# - Change memory for other glassfish services
 # - Deploy the nginx config (setup_www)
 # - Run postporcess for shock and awe
 # - Clones special versions of ui-common and narrative
@@ -27,6 +28,7 @@ RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
 	cd /root/dt; \
 	sed -i 's/10000/256/' /kb/deployment/services/workspace/start_service && \
 	sed -i 's/15000/384/' /kb/deployment/services/workspace/start_service && \
+	sed -i 's/--Xms 1000 --Xmx 2000/--Xms 384 --Xmx 512/' /kb/deployment/services/*/start_service && \
 	cd config;NOSTART=1 MYSERVICES=www ./setup_www;cd ../;\
 	./config/postprocess_shock;\
 	./config/postprocess_awe;\

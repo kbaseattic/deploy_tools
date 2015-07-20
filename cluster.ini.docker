@@ -133,8 +133,8 @@ kbase-admin-user=kbaseuserid
 kbase-admin-pwd=kbpassword
 awe-url=http://public.hostname.org:8080/services/awe-api/
 server-threads=4
-min-memory=512
-max-memory=1000
+min-memory=256
+max-memory=384
 urlname=userandjobstate
 service-port=7083
 host=ujs
@@ -547,8 +547,8 @@ server-threads=20
 method-spec-git-repo-local-dir=narrative_method_specs
 service-port=7125
 method-spec-git-repo-branch=dev
-max-memory=1000
-min-memory=512
+max-memory=384
+min-memory=256
 method-spec-git-repo=https://github.com/kbase/narrative_method_specs
 giturl=https://github.com/kbase/narrative_method_store
 basedir=narrative_method_store
@@ -616,9 +616,9 @@ basedir=user_profile
 # processed simultaneously.
 server-threads=20
 #Minimum memory size in MB.
-min-memory=1000
+min-memory=256
 #Maximum memory size in MB.
-max-memory=2000
+max-memory=384
 host=userprofile
 urlname=user_profile
 docker-links=mongo:mongo

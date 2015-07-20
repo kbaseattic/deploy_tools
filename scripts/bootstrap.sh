@@ -61,7 +61,7 @@ echo "Bulding Narrative Image"
 
 T=0
 if [ $(docker ps -q -f name=mongo|wc -l) -eq 0 ] ; then
-  docker run --name mongo --volume /data/docker/mongo:/data/db -d mongo:2.4 || exit
+  docker run --name mongo --volume /data/docker/mongo:/data/db -d mongo:2.4 --smallfiles || exit
   T=5
 fi
 
