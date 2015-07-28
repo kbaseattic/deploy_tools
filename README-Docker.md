@@ -1,5 +1,9 @@
 # Deploying with docker
 
+## Prerequisites
+
+A functioning deployment currently requires around 40GB of disk space available and 8GB of memory in the Docker machine.
+
 ## Create a site config.
 
     cp site.cfg.example site.cfg
@@ -70,6 +74,50 @@ Start a worker.
 There is a helper script to start a client container.  It will run as your user id using your home directory.
 
     ./scripts/client.sh
+
+# Developing Services with Containers (draft)
+
+Create a Dockerfile similar to this...
+
+    FROM kbase/deplbase:1.0
+    MAINTAINER Pat Smith psmith@mail.org
+
+Build the image and tag it.  You should probably use a tag different from the default.
+
+    docker build -t psmith/myservice:0.1
+
+Modify the kbrouter config (cluster.ini) to include your service.
+
+    # Your service name
+    [myservice]
+    #required: need to link to the front-end proxy
+    service-port=7444
+    # Not used in build, but helpful to include
+    giturl=https://github.com/psmith/myservice
+    host=myservice
+    #optional: must match the directory name in /kb/deployment/services/
+    #          needed if the directory name is different from the service name
+    basedir=myservice
+    #services specific paramaters
+    myparamter=1.234
+    #optional: Used to create the URL path to the service.
+    #          Defaults to service name
+    urlname=my_service
+    #required: should match the tag you specified in the build above
+    docker-image=psmith/myservice:0.1
+    #optional: can be used to link to other containers, i.e. databases
+    docker-links=mongo:mongo               
+    #optional: can be used to mount persistent spaces
+    docker-volumes=/data/docker/myservice:/mnt/myservice     
+
+Restart the router
+
+    cd kbrouter
+    docker-compose restart router
+
+Access your service via the public proxy and service URL
+
+    curl -X POST -k https://public.hostname.org:8443/services/my_service
 
 #Debugging Tips
 

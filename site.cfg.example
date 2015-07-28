@@ -3,7 +3,11 @@
 USER=kbuserid
 PASSWORD=password
 
-# This should be a publicly accessible hostname for the server
+# This should be a publicly accessible hostname for the server.
+# Do not use localhost.  If you are testing on a laptop using 
+# boot2docker or docker-machine, then you need to use the 
+# hostname/IP corresponding to the virtual machine (i.e. the 
+# address returned by boot2docker ip or docker-machine ip dev)
 PUBLIC=public.hostname.org
 
 # If you change this you may need to update cluster.ini too
