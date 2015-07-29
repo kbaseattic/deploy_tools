@@ -1,8 +1,8 @@
 #!/bin/sh
-. ./site.cfg
-[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 if [ -z $MYSERVICES ] ; then
+  . ./site.cfg
+  [ -z $IMAGE ] || IMAGE=kbase/depl:1.0
   docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --volume `pwd`:/tmp/dt $IMAGE /tmp/dt/$0
 else
   if [ ! -e "/usr/bin/mongo" ] ; then

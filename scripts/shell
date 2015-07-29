@@ -1,0 +1,5 @@
+#!/bin/sh
+. ./site.cfg
+[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
+
+docker run -it --rm --name shell --entrypoint bash $IMAGE

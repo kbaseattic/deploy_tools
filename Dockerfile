@@ -26,7 +26,7 @@ RUN echo ''|add-apt-repository ppa:nginx/stable; apt-get update; apt-get install
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
          lua5.1 luarocks liblua5.1-0 liblua5.1-0-dev liblua5.1-json liblua5.1-lpeg2 \
-         nodejs-dev npm nodejs-legacy;\
+         nodejs-dev npm nodejs-legacy docker.io;\
          npm install -g grunt-cli
 
 RUN luarocks install luasocket;\

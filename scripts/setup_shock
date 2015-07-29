@@ -3,10 +3,10 @@
 # Initialize Shock
 # On startup it ask some update questions.  This answer yes
 #
-. ./site.cfg
-[ -z $IMAGE ] || IMAGE=kbase/depl:1.0
 
 if [ -z $MYSERVICES ] ; then
+  . ./site.cfg
+  [ -z $IMAGE ] || IMAGE=kbase/depl:1.0
   docker run -it --rm \
 	--link mongo:mongo \
 	--volume /data/docker/shock:/mnt/Shock \

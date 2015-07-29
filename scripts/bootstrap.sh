@@ -11,10 +11,18 @@ echo "Preflight"
 for image in $RT $BASE $MONGO $MYSQL; do
   docker inspect $image > /dev/null
   if [ $? -ne 0 ] ; then
-    echo "Missing $image"
-    exit
+    echo "Pulling $image"
+    docker pull $image
   fi
 done
+
+# Check for deplbase 
+docker inspect kbase/deplbase:1.0 > /dev/null
+if [ $? -ne 0 ] ; then
+  echo "Building deplbase"
+  docker build -t kbase/deplbase:1.0 . > build.out || exit
+fi
+
 
 # Check for the site.cfg
 if [ ! -e ./site.cfg ] ; then
