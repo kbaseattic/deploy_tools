@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -gt 0 ] ; then
-  MYSERVICES=$1
+  export MYSERVICES=$1
   shift
 fi
 
@@ -26,9 +26,8 @@ elif [ "$MYSERVICES" = "narrative" ] ; then
   cp ./ssl/narrative.key /etc/nginx/ssl/server.key
   GID=$(ls -n /var/run/docker.sock |awk '{print $4}')
   cat /etc/group|awk -F: '{if ($3=='$GID'){print "groupdel "$1}}'|sh
-  groupmod -g $GID docker
-  usermod -g $GID www-data
-  sed -i 's/www-data;/www-data;\ndaemon off;/' /etc/nginx/nginx.conf
+  groupmod -g $GID docker || groupadd -g $GID docker
+  sed -i 's/user www-data;/user www-data docker;\ndaemon off;\nerror_log \/dev\/stdout info;/' /etc/nginx/nginx.conf
   /usr/sbin/nginx
 elif [ "$MYSERVICES" = "aweworker" ] ; then
   CGROUP=$1

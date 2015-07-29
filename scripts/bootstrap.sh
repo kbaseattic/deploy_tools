@@ -42,14 +42,15 @@ if [ ! -e ./ssl/ ] ; then
   ./scripts/create_certs
 fi
 
+# No longer needed.  Provided in base.
 # Check that there is a tag file
-if [ ! -e ./tagfile ] ; then
-  echo "Create a tagfile"
-  ./deploy_cluster mkhashfile tagfile
-fi
+#if [ ! -e ./tagfile ] ; then
+#  echo "Create a tagfile"
+#  ./deploy_cluster mkhashfile tagfile
+#fi
 
 echo "Creating Configured Image"
-[ ! -z $SKIPBUILD ] || docker build -t $IMAGE . > build.out
+[ ! -z $SKIPBUILD ] || docker build -t $IMAGE -f Dockerfile.configure . > build.out
 if  [ $? -ne 0 ] ; then
   echo "Failed build "
   tail build.out
@@ -102,11 +103,11 @@ sleep 5
 echo ""
 
 echo "Poking some services to start things up"
-curl -s http://localhost:8080/services/shock-api > /dev/null
-curl -s http://localhost:8080/services/awe-api > /dev/null
-curl -s http://localhost:8080/services/ws > /dev/null &
-curl -s http://localhost:8080/services/userandjobstate > /dev/null &
-curl -s http://localhost:8080/services/user_profile > /dev/null &
+curl -s http://$PUBLIC:8080/services/shock-api > /dev/null
+curl -s http://$PUBLIC:8080/services/awe-api > /dev/null
+curl -s http://$PUBLIC:8080/services/ws > /dev/null &
+curl -s http://$PUBLIC:8080/services/userandjobstate > /dev/null &
+curl -s http://$PUBLIC:8080/services/user_profile > /dev/null &
 
 echo "Starting awe worker"
 docker inspect mongo > /dev/null

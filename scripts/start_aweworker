@@ -5,7 +5,7 @@
 CG=dev
 
 ARGS=" -d"
-#ARGS=" -it --rm --entrypoint bash"
+#ARGS=" -it --rm "
 
 docker kill aweworker_$CG > /dev/null 2>&1
 docker rm aweworker_$CG > /dev/null 2>&1

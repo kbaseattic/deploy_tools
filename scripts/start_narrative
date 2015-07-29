@@ -9,7 +9,8 @@ WWW=$(docker ps|grep _www_|awk '{print $1}'|head -1)
 ARGS="-d"
 
 # To debug: comment this out
-# ARGS="-it --rm --entrypoint bash"
+#ARGS="-it --rm --entrypoint bash"
+#ARGS="-it --rm "
 
 echo $WWW
 

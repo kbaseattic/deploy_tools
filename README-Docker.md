@@ -22,17 +22,12 @@ These steps are done by the bootstrap.  Advanced users may need to run some step
     ./scripts/generate_config
     ./scripts/create_certs
 
-## Create a tag file for the versions.  This determines what version of services will be deployed.
-
-    ./deploy_cluster mkhashfile tagfile
-
-
 ## Build images
 
 Make sure kbase/rtmin is available. This is provide by a branch in the bootstrap repo.
 
-    docker build -t kbase/deplbase:1.0 -f Dockerfile.base .
-    docker build -t kbase/depl:1.0 .
+    docker build -t kbase/deplbase:1.0 .
+    docker build -t kbase/depl:1.0 -f Dockerfile.configure .
     ./scripts/build_narrative
 
 ## Start Base services
@@ -55,8 +50,8 @@ Clone kbrouter and use it to start things up
     cp ../cluster.ini cluster.ini
     docker-compose build
     docker-compose up -d
-    curl http://localhost:8080/services/shock-api
-    curl http://localhost:8080/services/awe-api
+    curl http://<publichostname>:8080/services/shock-api
+    curl http://<publichostname>:8080/services/awe-api
     cd ..
 
 ## Start workers

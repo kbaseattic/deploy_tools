@@ -11,7 +11,7 @@ runtime=/kb/runtime
 dtdir=/root/dt
 hashfile=githashes
 make-options=DEPLOY_RUNTIME=$KB_RUNTIME ANT_HOME=$KB_RUNTIME/ant
-skip-deploy-client=auth,kb_model_seed,bootstrap,ui-common
+skip-deploy-client=auth,kb_model_seed,bootstrap,ui-common,narrative,communities_api
 
 [defaults]
 mem=2g
@@ -95,6 +95,8 @@ api-url=http://public.hostname.org:8080/serivces/awe-api/
 admin-user=kbaseuserid
 urlname=awe-api
 docker-links=mongo:mongo
+deploy=jars,workspace_deluxe,cdmi_api,kbrest_common,typecomp,matR,translation,CompressionBasedDistance,trees,fbaModelServices,probabilistic_annotation,genome_annotation,idserver,handle_service,ontology_service,kmer_annotation_figfam,meme,CoExpression,KBaseExpression,transform,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile
+deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile
 
 [aweworker]
 type=worker
@@ -389,18 +391,16 @@ proxytype=skip
 #giturl=https://github.com/kbase/plant_expression_service
 #host=test11
 
-[invocation]
-mem=42G
-service-url=http://public.hostname.org:8080/services/invocation/
-authenticated-storage-dir=/data/storage-auth
-nonauthenticated-storage-dir=/data/storage-nonauth
-nonauthenticated-storage=/data/storage-nonauth
-authenticated-storage=/data/storage-auth
-service-port=7049
-host=changeme
-deploy=jars,workspace_deluxe,invocation,cdmi_api,kbrest_common,typecomp,matR,translation,CompressionBasedDistance,trees,fbaModelServices,probabilistic_annotation,genome_annotation,idserver,handle_service,ontology_service,kmer_annotation_figfam,meme,CoExpression,KBaseExpression,transform,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile
-deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile
-proxytype=skip
+#[invocation]
+#mem=42G
+#service-url=http://public.hostname.org:8080/services/invocation/
+#authenticated-storage-dir=/data/storage-auth
+#nonauthenticated-storage-dir=/data/storage-nonauth
+#nonauthenticated-storage=/data/storage-nonauth
+#authenticated-storage=/data/storage-auth
+#service-port=7049
+#host=changeme
+#proxytype=skip
 
 [CoExpression]
 host=CoExpression
@@ -625,8 +625,14 @@ docker-links=mongo:mongo
 
 [communities_api]
 type=lib
-api_host=http://kbase.us/services/communities/1
+git-branch=develop
+#api_host=http://kbase.us/services/communities/1
+api_host=http://ci.kbase.us/services/communities/1
 port=7052
+
+[mgrast_pipeline]
+type=lib
+git-branch=develop
 
 [Transform]
 giturl=https://github.com/kbase/transform
