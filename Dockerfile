@@ -44,7 +44,9 @@ ENV PATH ${TARGET}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/
  
 RUN cp cluster.ini.docker cluster.ini && ./deploy_cluster mkhashfile tagfile && rm -f site.cfg && rm -rf ssl
 
-RUN MYSERVICES=awe ./deploy_cluster -s deploy local tagfile
+RUN MYSERVICES=awe ./deploy_cluster -s deploy local tagfile && \
+    find /kb/dev_container/modules -iname ".git" | xargs rm -rf && \
+    rm -rf /kb/dev_container/modules/trees/data
 
 # Make things run in the foreground and spit out logs -- hacky
 RUN \
@@ -73,7 +75,8 @@ RUN \
 RUN \
         cd /kb/dev_container/modules;\
         git clone https://github.com/kbase/ui-common -b staging;\
-        git clone https://github.com/scanon/narrative -b docker
+        git clone https://github.com/scanon/narrative -b docker;\ 
+        rm -rf /kb/dev_container/modules/ui-common/.git /kb/dev_container/modules/narrative/.git
 
 ONBUILD ENV USER root
 
