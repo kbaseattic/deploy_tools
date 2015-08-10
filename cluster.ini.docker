@@ -12,6 +12,7 @@ dtdir=/root/dt
 hashfile=githashes
 make-options=DEPLOY_RUNTIME=$KB_RUNTIME ANT_HOME=$KB_RUNTIME/ant
 skip-deploy-client=auth,kb_model_seed,bootstrap,ui-common,narrative,communities_api
+default-modules=kbapi_common,typecomp,jars,auth,kbrest_common
 
 [defaults]
 mem=2g
