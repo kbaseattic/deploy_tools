@@ -33,6 +33,7 @@ if (defined $cfg->{services}->{$me}->{'adminpass'}){
 my %userexist;
 my %dbexist;
 
+waitforserver();
 getusers();
 getdbs();
 
@@ -76,6 +77,21 @@ while (<L>){
   mysystem("cat $_|mysql $adminhost $adminpass");
 }
 close L;
+
+sub waitforserver {
+  my $avail = 0;
+  print "Waiting for mysql server to become available.\n";
+  while(!$avail) {
+    $avail = 1;
+    open(U,"echo 'show databases'|mysql $adminhost $adminpass mysql 2>&1 1>/dev/null |");
+    while(my $line=<U>) {
+      if($line =~ /ERROR/) {
+        sleep(5);
+        $avail = 0;
+      }
+    }
+  }
+}
 
 sub getusers {
   open(U,"echo 'select User from user'|mysql $adminhost $adminpass mysql|");
