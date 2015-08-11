@@ -44,6 +44,10 @@ elif [ "$MYSERVICES" = "aweworker" ] ; then
   ./config/postprocess_aweworker
   sed -i 's/\/kb\/runtime\/sbin\/daemonize.*PID_FILE//' /kb/deployment/services/awe_service/start_*
   ./deploy_cluster start
+elif [ "$MYSERVICES" = "shell" ] ; then
+  exec bash --login
+elif [ "$MYSERVICES" = "config" ] ; then
+  cat cluster.ini.docker
 else
   [ -e /mnt/Shock/data ] || mkdir /mnt/Shock/data /mnt/Shock/site /mnt/Shock/logs
   [ -e /mnt/transform_working ] || mkdir /mnt/transform_working
