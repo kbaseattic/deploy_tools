@@ -452,7 +452,9 @@ sub generate_autodeploy{
   }
   
   $acfg->newval($section,'deploy-master',join ',',@{$dlist->{deploy}}) or die "Unable to set deploy-service";
-  $acfg->newval($section,'deploy-service',join ',',@{$dlist->{'deploy-service'}}) or die "Unable to set deploy-service";
+  if (scalar @{$dlist->{'deploy-service'}} > 0){
+    $acfg->newval($section,'deploy-service',join ',',@{$dlist->{'deploy-service'}}) or die "Unable to set deploy-service";
+  }
   $acfg->newval($section,'ant-home',$global->{runtime}."/ant") or die "Unable to set ant-home";
 
   # new: read directory listing and deploy those clients

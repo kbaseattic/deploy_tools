@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# Check that things are running
+for s in shock-api awe-api transform narrative_method_store handlemngr handleservice user_profile userandjobstate ws ; do
+  L=$(docker ps -f name=proxy_$s -q|wc -l) #> /dev/null
+  if [ $L -ne 1 ] ; then
+    echo "$s not running"
+    exit 1
+  fi
+done
+
+
+for s in mysql mongo aweworker_dev; do
+  L=$(docker ps -f name=$s$ -q|wc -l) #> /dev/null
+  if [ $L -ne 1 ] ; then
+    echo "$s not running"
+    exit 1 
+  fi
+done
+
+# Check shock
+if [ $(docker logs proxy_shock-api 2>&1|grep -c Running) -lt 1 ] ; then
+  echo "Shock not running"
+  exit 1
+fi
+
+# Check the slow pokes
+for s in ws narrative_method_store userandjobstate user_profile ; do
+  while [ $(docker logs proxy_$s 2>&1|tail -1|grep -c Starting) -eq 1 ] ; do
+    echo "Waiting for $s to start"
+    sleep 10
+  done
+
+  while [ $(docker logs proxy_$s 2>&1|grep -c 'Domain Ping') -lt 1 ] ; do
+    echo "$s not ready"
+    sleep 10
+  done
+done

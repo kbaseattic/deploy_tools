@@ -68,7 +68,7 @@ fi
 echo "Bulding Narrative Image"
 [ ! -z $SKIPBUILD ] || ./scripts/build_narrative >> build.out
 
-T=0
+T=1
 if [ $(docker ps -q -f name=mongo|wc -l) -eq 0 ] ; then
   docker run --name mongo --volume /data/docker/mongo:/data/db -d mongo:2.4 --smallfiles || exit
   T=5
@@ -81,17 +81,27 @@ fi
 
 echo "Waiting $T seconds for database servers to start"
 sleep $T
+while [ $(docker logs mysql 2>&1|grep -c 'mysqld: ready for connections.') -lt 1 ] ; do
+  echo "Still waiting for mysql"
+  sleep 1
+done
+
+while [ $(./scripts/setup_mysql|grep -c ERROR) -gt 1 ] ; do
+  echo "mysql may not be up yet"
+  sleep 1
+done
 
 if [ ! -e initialize.out ] ; then
   echo "Initializing database"
   ./scripts/initialize.sh > initialize.out
+  sleep 5
 else
+  ./scripts/setup_mysql >> initialize.out
   echo ""
-  echo "Skipping Initialize."
-  echo "Run ./scripts/initialize.sh by hand if you need to re-initialize"
+  echo "!! Skipping Initialize."
+  echo "!! Run ./scripts/initialize.sh by hand if you need to re-initialize"
   echo ""
 fi
-sleep 5
 
 if [ ! -e ../kbrouter ] ; then
   echo "Cloning kbrouter"
@@ -102,20 +112,21 @@ cp ./cluster.ini ../kbrouter/cluster.ini
 [ -e ../kbrouter/ssl/ ] || cp -a ssl/ ../kbrouter/
 
 echo "Buidling Router"
-(cd ../kbrouter;docker-compose build ) >> build.out
+#(cd ../kbrouter;docker-compose build ) >> build.out
 
 echo "Starting Router"
 (cd ../kbrouter;docker-compose up -d)
+
 echo "Waiting for router to start"
-sleep 5
+while [ $(curl -s http://$PUBLIC:8080/services/|grep -c user_profile) -lt 1 ] ; do
+  sleep 1
+done
 echo ""
 
 echo "Poking some services to start things up"
-curl -s http://$PUBLIC:8080/services/shock-api > /dev/null
-curl -s http://$PUBLIC:8080/services/awe-api > /dev/null
-curl -s http://$PUBLIC:8080/services/ws > /dev/null &
-curl -s http://$PUBLIC:8080/services/userandjobstate > /dev/null &
-curl -s http://$PUBLIC:8080/services/user_profile > /dev/null &
+for s in shock-api awe-api handleservice handlemngr ws userandjobstate user_profile transform narrative_method_store; do
+  curl -s http://$PUBLIC:8080/services/$s > /dev/null
+done
 
 echo "Starting awe worker"
 docker inspect mongo > /dev/null
@@ -129,6 +140,9 @@ if [ $? -eq 0 ] ; then
 else
   ./scripts/start_narrative
 fi
+
+echo "Checking deployment"
+./scripts/check_deployment || exit 1
 
 echo "Waiting"
 echo ""

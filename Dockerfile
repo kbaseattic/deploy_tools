@@ -6,7 +6,7 @@
 # The DOE Systems Biology Knowledgebase (KBase)
 # Made available under the KBase Open Source License
 #
-FROM kbase/rtmin:1.2
+FROM kbase/rtmin:latest
 MAINTAINER Shane Canon scanon@lbl.gov
 
 #RUN DEBIAN_FRONTEND=noninteractive apt-get update;apt-get -y upgrade;apt-get install -y \
@@ -41,9 +41,14 @@ ADD ./ /root/dt
 WORKDIR /root/dt
 ENV TARGET /kb/deployment
 ENV PATH ${TARGET}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
- 
+
+# Remove Old List if List is installed
+RUN perl -e 'use List::Util' && rm perl/List/Util.pm
+
+# Generate the cluster.ini and hash.  Cleanup sensitive files 
 RUN cp cluster.ini.docker cluster.ini && ./deploy_cluster mkhashfile tagfile && rm -f site.cfg && rm -rf ssl
 
+# Deploy using awe as the service definition
 RUN MYSERVICES=awe ./deploy_cluster -s deploy local tagfile && \
     find /kb/dev_container/modules -iname ".git" | xargs rm -rf && \
     rm -rf /kb/dev_container/modules/trees/data
@@ -75,7 +80,7 @@ RUN \
 RUN \
         cd /kb/dev_container/modules;\
         git clone https://github.com/kbase/ui-common -b staging;\
-        git clone https://github.com/scanon/narrative -b docker;\ 
+        git clone --recurse-submodules https://github.com/scanon/narrative -b docker;\ 
         rm -rf /kb/dev_container/modules/ui-common/.git /kb/dev_container/modules/narrative/.git
 
 ONBUILD ENV USER root
