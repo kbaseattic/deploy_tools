@@ -1,0 +1,35 @@
+#!/usr/bin/env perl
+
+use FindBin;
+use lib "$FindBin::Bin/../perl/";
+use KBDeploy;
+use Getopt::Std;
+use strict;
+
+my $cfg=read_config();
+
+# Bootstrap will:
+# - Install MySQL
+# - Copy in the config
+#
+
+if ( -e "/data/bootstrapped" ) {
+  print "Already Bootstrapped\n";
+  exit;
+}
+
+# Add repo
+if (! -e "/usr/bin/mysql" ){
+    mysystem("apt-get install -y software-properties-common");
+    mysystem("apt-key adv --recv-keys --keyserver hkp://keyserver.ubuntu.com:80 0xcbcb082a1bb943db");
+    mysystem("add-apt-repository 'deb http://mirror.stshosting.co.uk/mariadb/repo/10.0/ubuntu trusty main'");
+    mysystem("apt-get update -y ;apt-get -y install mariadb-server");
+}
+
+# TODO
+# - change config to use public interface
+# - Change to use /data
+
+open(T,">/data/bootstrapped");
+print T "done\n";
+close T;

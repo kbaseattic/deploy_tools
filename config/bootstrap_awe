@@ -1,0 +1,5 @@
+#!/bin/sh
+
+echo "deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen" > /etc/apt/sources.list.d/mongodb.list 
+
+apt-get install -y mongodb-10gen==2.4.12                

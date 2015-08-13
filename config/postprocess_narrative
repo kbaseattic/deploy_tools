@@ -68,14 +68,15 @@ mysystem('grep -rl //www.kbase.us/services /kb/deployment/ui-common 2>/dev/null|
 
 # Now for the narrative url
 print "Replacing narrative in ui-common\n";
-mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "skip"');
+mysystem('grep -rl narrative.kbase.us /kb/deployment/ui-common 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/" || echo "skip"');
 
 # Build docker
 chdir "$DC/modules/narrative" or die "Unable to change dir";
 print "Replacing kbase in narrative $DC/narrative\n";
+mysystem("git submodule init;git submodule update --recursive\n");
 mysystem('grep -rl //kbase.us/services '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/\/\/kbase.us\/services/\/\/' . $base_url . '\/services/g" || echo "Done" ');
 
-mysystem('grep -rl narrative.kbase.us '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'" || echo "Done" ');
+mysystem('grep -rl narrative.kbase.us '.$DC.'/modules/narrative 2>/dev/null|xargs sed -i "s/narrative.kbase.us/'.$narr_host.'/" || echo "Done" ');
 
 # Fix up config.json
 my $cj=$DC."/modules/narrative/src/config.json";
@@ -129,6 +130,7 @@ if (defined $scfg->{logging}){
   }
   
   close N;
+  # is this failing somehow?
   mysystem(". $DEPLOY/user-env.sh;kb-log-proxy -f $DEPLOY/narrative-log-proxy.conf > /tmp/narrative-log-proxy.log 2>&1 &");
 }
 
