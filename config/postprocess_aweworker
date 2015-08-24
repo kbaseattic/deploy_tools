@@ -24,6 +24,7 @@ print "Service: $service\n";
 
 # Fix up config
 my $file=$KB_DEPLOY."/services/awe_service/conf/awec.cfg";
+my $baseworkdir=$cfg->{'services'}->{$service}->{'baseworkdir'};
 my $mcfg=new Config::IniFiles( -file => $file) or die "Unable to open $file".$Config::IniFiles::errors[0];
 
 $mcfg->newval('Client','group','replace') or die "Unable to set group";
@@ -32,25 +33,48 @@ $mcfg->newval('Client','clientgroup_token',"replace");
 $mcfg->newval('Client','serverurl',$cfg->{services}->{$service}->{'serverurl'}) or die "Unable to set serverurl";
 $mcfg->setval('Client','supported_apps','*');
 $mcfg->setval('Client','name','hostname');
+# added kkeller 30jul2015.  not generally suitable for production
+$mcfg->setval('Client','auto_clean_dir','false');
 
-my $defaultdone=0;
+
+my @aweGroups;
 foreach my $token (split /,/,$cfg->{services}->{$service}->{'tokens'}){
   my @l=split /[=|]/,$token;
   my $group=$l[1];
+  push @aweGroups,$group;
   $mcfg->setval('Client','group',$group);
   $mcfg->setval('Client','clientgroup_token',$token);
+  $mcfg->setval('Client','workpath',$baseworkdir . '/' . $group . '/work');
+  $mcfg->setval('Directories','data',$baseworkdir . '/' . $group . '/data');
+  $mcfg->setval('Directories','logs',$baseworkdir . '/' . $group . '/logs');
   my $out=$file;
-  if ($defaultdone == 1){
-    $out=~s/cfg$//;
-    $out.="$group.cfg";
-    $defaultdone=1;
-  }
+  $out=~s/cfg$//;
+  $out.="$group.cfg";
   print "Updating $out\n";
   $mcfg->WriteConfig($out) or die "Unable to write $file";
 }
 
-mysystem("cp $KB_DEPLOY/services/awe_service/start_{aweclient,service}");
-mysystem("cp $KB_DEPLOY/services/awe_service/stop_{aweclient,service}");
+foreach my $action ('start','stop')
+{
+  my $script=<<EOF;
+#!/bin/bash
+for worker in @aweGroups
+do
+    $KB_DEPLOY/services/awe_service/${action}_aweclient \$worker
+done
+EOF
+
+  my $scriptfile="$KB_DEPLOY/services/awe_service/${action}_service";
+  open (SCRIPT, '>', $scriptfile) or die "couldn't open $scriptfile: $!";
+  print SCRIPT $script;
+  close SCRIPT;
+
+  # need to protect / in $baseworkdir.  yay leaning toothpick syndrome!
+  $baseworkdir=~s/\//\\\//g;
+  # kkeller: i use perl as my sed
+  mysystem("perl -pi -e 's|^PID_FILE=.*|PID_FILE=$baseworkdir/client\\\$suffix.pid|;' $KB_DEPLOY/services/awe_service/${action}_aweclient");
+  mysystem("perl -pi -e 's|^AWE_DIR=.*|AWE_DIR=$baseworkdir|;' $KB_DEPLOY/services/awe_service/${action}_aweclient");
+}
 
 # May not be needed anymore.  Check.
 mysystem("sed -i 's/\\/\\/kbase.us/\\/\\/".$base_url."\\//' $KB_DEPLOY/plbin/njs*");
@@ -68,10 +92,27 @@ if ( ! -e "$KB_DEPLOY/bin/assemble_contigset_from_reads") {
   mysystem("sed  -i 's/\\..fasta_to_contigset/fasta_to_contigset/' $KB_DEPLOY/bin/assemble_contigset_from_reads");
 }
 
+# Sync and restart other aweworkers
+if (defined $cfg->{services}->{$service}->{shareddir}){
+  my $shared=$cfg->{services}->{$service}->{shareddir};
+  my @s=stat $KB_DEPLOY;
+  my $ts=$s[10];
+
+  mysystem("rsync -avvz --exclude *.log --exclude *.pid $KB_DEPLOY/ $shared/deployment.$ts");
+  if (defined $cfg->{services}->{$service}->{aweworkers}){
+    for my $host (split /,/, $cfg->{services}->{$service}->{aweworkers}) {
+      mysystem("ssh $host $KB_DEPLOY/services/awe_service/stop_service || echo Ignore");
+      mysystem("ssh $host \"rm $KB_DEPLOY;ln -s $shared/deployment.$ts $KB_DEPLOY\"");
+      mysystem("ssh $host $KB_DEPLOY/services/awe_service/start_service || echo Ignore");
+    }
+  }
+}
+
 # TODO
 #
-# export AUTH='Authorization: OAuth $TOK
+# export TOKEN=$(grep token ~/.kbase_config|sed 's/token=//')
 #
-#curl -X POST -H "$AUTH" http://<awe>:7107/cgroup/next
+#curl -X POST -H "AUthorization: OAuth $TOKEN" http://kbase.us/services/awe-api/cgroup/<cgroup>
 #
 # Grab output and stuff in config
+

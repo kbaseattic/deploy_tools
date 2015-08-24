@@ -51,6 +51,10 @@ sub fix_config {
   $mcfg->setval('External','site-url',$acfg->{'site-url'});
   $mcfg->setval('External','api-url',$acfg->{'api-url'});
 
+#
+  if (defined $acfg->{'max_client_failure'}){
+    $mcfg->newval('Server','max_client_failure',$acfg->{'max_client_failure'});
+  }
 
 # Adjust some settings
   for my $param ('read','write','create-user'){
