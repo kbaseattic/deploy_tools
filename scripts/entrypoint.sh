@@ -44,12 +44,22 @@ elif [ "$MYSERVICES" = "aweworker" ] ; then
   ./config/postprocess_aweworker
   sed -i 's/\/kb\/runtime\/sbin\/daemonize.*PID_FILE//' /kb/deployment/services/awe_service/start_*
   ./deploy_cluster start
+elif [ "$MYSERVICES" = "narrative_job_service" ] ; then
+  USER=$(grep service_auth_name cluster.ini|sed 's/service_auth_name=//')
+  PASS=$(grep service_auth_pass cluster.ini|sed 's/service_auth_pass=//')
+  echo $PASS|kbase-login $USER
+  TOK=$(grep token ~/.kbase_config|sed 's/token=//')
+  sed -i "s#njstoken#$TOK#" cluster.ini
+  sed -i "s#njstoken#$TOK#" /kb/deployment/deployment.cfg
+  ./deploy_cluster start
 elif [ "$MYSERVICES" = "shell" ] ; then
   exec bash --login
 elif [ "$MYSERVICES" = "config" ] ; then
   cat cluster.ini.docker
 else
-  [ -e /mnt/Shock/data ] || mkdir /mnt/Shock/data /mnt/Shock/site /mnt/Shock/logs
+  [ -e /mnt/Shock/data ] || mkdir /mnt/Shock/data
+  [ -e /mnt/Shock/site ] || mkdir /mnt/Shock/site
+  [ -e /mnt/Shock/logs ] || mkdir /mnt/Shock/logs
   [ -e /mnt/transform_working ] || mkdir /mnt/transform_working
   ./deploy_cluster start
   L=$(ls /kb/deployment//services/*/*/*/*/server.log)
