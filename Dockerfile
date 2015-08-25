@@ -45,8 +45,14 @@ ENV PATH ${TARGET}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/
 # Remove Old List if List is installed
 RUN perl -e 'use List::Util' && rm perl/List/Util.pm
 
+# Incremental package updates not yet in the run-time
+RUN cpanm -i REST::Client && cpanm -i Time::ParseDate && \
+    cd /kb/bootstrap/kb_seed_kmers/ && \
+    ./build.seed_kmers /kb/runtime/
+
 # Generate the cluster.ini and hash.  Cleanup sensitive files 
-RUN cp cluster.ini.docker cluster.ini && ./deploy_cluster mkhashfile tagfile && rm -f site.cfg && rm -rf ssl
+RUN cp cluster.ini.docker cluster.ini && ./deploy_cluster mkhashfile tagfile && \
+    rm -f site.cfg && rm -rf ssl && mkdir -p /kb/deployment/services/meme
 
 # Deploy using awe as the service definition
 RUN MYSERVICES=awe ./deploy_cluster -s deploy local tagfile && \
@@ -87,6 +93,13 @@ ONBUILD ENV USER root
 
 ONBUILD ADD cluster.ini /root/dt/cluster.ini
 ONBUILD ADD ssl /root/dt/ssl
+
+# Add the ssl certs into the certificate tree
+ONBUILD RUN cat ssl/proxy.crt  >> /etc/ssl/certs/ca-certificates.crt && \
+    cat ssl/proxy.crt > /etc/ssl/certs/`openssl x509 -noout -hash -in ssl/proxy.crt`.0 && \
+    cat ssl/narrative.crt  >> /etc/ssl/certs/ca-certificates.crt && \
+    cat ssl/narrative.crt > /etc/ssl/certs/`openssl x509 -noout -hash -in ssl/narrative.crt`.0
+
 # This run command does several things including:
 # - Changing the memory size for the workspace
 # - Change memory for other glassfish services
@@ -110,6 +123,12 @@ ONBUILD RUN cp ./cluster.ini /kb/deployment/deployment.cfg;\
 
 # We need to refix start
 ONBUILD RUN sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
+
+# Fix up URLs in clients
+ONBUILD RUN PUBLIC=$(grep baseurl= cluster.ini|sed 's/baseurl=//'|sed 's/:.*//') && \
+         sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/biokbase/*/Client.py && \
+         sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/Bio/KBase/*/Client.pm && \
+         sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/javascript/*/Client.js
 
 ONBUILD ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 ONBUILD CMD [ ]

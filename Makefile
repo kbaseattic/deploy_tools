@@ -1,5 +1,7 @@
 all:
 
+docker:
+	docker build -t kbase/deplbase:latest .
 
 test:
 	for t in $(shell ls ./t/*.t|grep -v provision); do \
