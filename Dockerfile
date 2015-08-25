@@ -6,7 +6,7 @@
 # The DOE Systems Biology Knowledgebase (KBase)
 # Made available under the KBase Open Source License
 #
-FROM kbase/rtmin:latest
+FROM kbase/runtime:latest
 MAINTAINER Shane Canon scanon@lbl.gov
 
 #RUN DEBIAN_FRONTEND=noninteractive apt-get update;apt-get -y upgrade;apt-get install -y \
