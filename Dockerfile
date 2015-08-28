@@ -48,7 +48,10 @@ RUN perl -e 'use List::Util' && rm perl/List/Util.pm
 # Incremental package updates not yet in the run-time
 RUN cpanm -i REST::Client && cpanm -i Time::ParseDate && \
     cd /kb/bootstrap/kb_seed_kmers/ && \
-    ./build.seed_kmers /kb/runtime/
+    ./build.seed_kmers /kb/runtime/ && \
+    cd /kb/bootstrap/kb_glpk/ && \
+    ./glpk_build.sh /kb/runtime/
+
 
 # Generate the cluster.ini and hash.  Cleanup sensitive files 
 RUN cp cluster.ini.docker cluster.ini && ./deploy_cluster mkhashfile tagfile && \
@@ -65,28 +68,16 @@ RUN \
         sed -i 's/--daemonize//' /kb/deployment/services/*/start_service;\
         sed -i 's/--error-log [^ "]*//' /kb/deployment/services/*/start_service;\
         sed -i 's/--pid [^ "]*//' /kb/deployment/services/*/start_service;\
+        [ -e /kb/deployment//services/fbaModelServices/start_service ] && sed -i 's/starman -D/starman/' /kb/deployment/services/fbaModelServices/start_service;\
         sed -i 's/\/kb\/runtime\/sbin\/daemonize .*\/kb/\/kb/' /kb/deployment/services/*/start_service;\
         sed -i 's/>.*//' /kb/deployment//services/*/start_service;\
         sed -i 's/nohup //' /kb/deployment//services/*/start_service;\
         sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
 
-# Add URI::Dispatch for Invocation (can delete this later)
-#RUN wget http://search.cpan.org/CPAN/authors/id/M/MN/MNF/URI-Dispatch-v1.4.1.tar.gz;\
-#    tar xzf URI-Dispatch-v1.4.1.tar.gz;\
-#    cd URI-Dispatch-v1.4.1; \
-#    /kb/runtime/bin/perl ./Makefile.PL ; \
-#    make; \
-#    make install; \
-#    cd ..; \
-#    rm -rf URI-Dispatch-v1.4.1; \
-#    yes|/kb/runtime/bin/cpan install Modern::Perl; \
-#    /kb/runtime/bin/cpan install Ouch; \
-#    /kb/runtime/bin/cpan install MooseX::Declare
-
 RUN \
         cd /kb/dev_container/modules;\
         git clone https://github.com/kbase/ui-common -b staging;\
-        git clone --recurse-submodules https://github.com/scanon/narrative -b docker;\ 
+        git clone --recurse-submodules https://github.com/kbase/narrative -b docker;\ 
         rm -rf /kb/dev_container/modules/ui-common/.git /kb/dev_container/modules/narrative/.git
 
 ONBUILD ENV USER root

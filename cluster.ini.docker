@@ -97,7 +97,7 @@ admin-user=kbaseuserid
 urlname=awe-api
 docker-links=mongo:mongo
 deploy=jars,workspace_deluxe,cdmi_api,kbrest_common,typecomp,matR,translation,CompressionBasedDistance,trees,fbaModelServices,probabilistic_annotation,genome_annotation,genome_comparison,idserver,handle_service,ontology_service,kmer_annotation_figfam,meme,expression,transform,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,coexpression
-deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,genome_comparison,genome_annotation,kmer_annotation_figfam,expression,KBaseFBAModeling,idserver,ontology_service,probabilistic_annotation,cbd,coexpression,translation,trees,erdb_service,kmer_annotation_figfam,expression,genome_annotation
+deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,genome_comparison,genome_annotation,kmer_annotation_figfam,expression,KBaseFBAModeling,idserver,ontology_service,probabilistic_annotation,cbd,coexpression,translation,trees,erdb_service,kmer_annotation_figfam,expression,genome_annotation,kb_model_seed
 
 [aweworker]
 type=worker
@@ -165,7 +165,7 @@ urlname=ws
 basedir=workspace
 mongodb-database=workspace
 mongodb-pwd=xxxxxxxx
-ws-admin=wstest
+ws-admin=kbaseuserid
 backend-secret=kbpassword
 mongodb-host=mongo
 mongodb-user=wsserv
@@ -196,7 +196,7 @@ docker-links=mongo:mongo,proxy_shock-api:shock-api
 giturl=https://github.com/kbase/translation
 dbhost=devdb1.newyork.kbase.us
 pass=xxxxxxxx
-blast_db_dir=/kb/deploymentranslation/
+blast_db_dir=/kb/deployment/services/translation/
 service-port=3306
 dbname=genomics_dev
 dbms=mysql
@@ -209,13 +209,14 @@ proxytype=skip
 [CompressionBasedDistance]
 shock_url=http://public.hostname.org:8080/services/shock-api/
 userandjobstate_url=http://public.hostname.org:8080/services/userandjobstate/
-work_folder_path=/kbase/deployments/20140109-proCompressionBasedDistance/data
+work_folder_path=/data
 num_pool_processes=5
 service-port=7102
 giturl=https://github.com/kbase/cbd
 urlname=cbd
 host=cbd
 proxytype=skip
+# docker-volume=/data:/data
 
 [protein_info_service]
 giturl=https://github.com/kbase/protein_info_service
@@ -233,18 +234,19 @@ proxytype=skip
 size=12G
 probanno-url=http://public.hostname.org:8080/services/probabilistic_annotation/
 mssserver-url=http://bio-data-1.mcs.anl.goms_fba
-mfatoolkitbin=/kbase/deployments/20140109-prod/bin/mfatoolkit
+mfatoolkitbin=/kb/deployment/bin/mfatoolkit
 fbajobdir=/tmp/fbajobs
 accounttype=kbase
 idserver-url=http://public.hostname.org:8080/services/idserver/
 jobserver-url=http://public.hostname.org:8080/services/wsold/
 workspace-url=http://public.hostname.org:8080/services/ws/
+awe-url=http://public.hostname.org:8080/services/awe-api/
+shock-url=http://public.hostname.org:8080/services/shock-api/
 fbajobcache=/tmp/fbacache/
 defaultJobState=queued
 gaserver-url=http://public.hostname.org:8080/services/genome_annotation/
 service-port=7036
 giturl=https://github.com/kbase/KBaseFBAModeling
-git-branch=deploy
 urlname=KBaseFBAModeling
 host=KBaseFBAModeling
 proxytype=skip
@@ -306,11 +308,11 @@ pseudo_count=40
 cdmi_url=http://public.hostname.org:8080/services/cdmi_api/
 userandjobstate_url=http://public.hostname.org:8080/services/userandjobstate/
 fbamodelservices_url=http://public.hostname.org:8080/services/fba_model_services/
-work_folder_path=/kbase/data/probabilistic_annotation/jobs
+work_folder_path=/data/jobs
 blast_threads=1
 workspace_url=http://public.hostname.org:8080/services/ws/
 separator=///
-data_folder_path=/kbase/data/probabilistic_annotation/data
+data_folder_path=/data
 debug=False
 shock_url=http://public.hostname.org:8080/services/shock-api/
 job_queue=local
@@ -319,6 +321,7 @@ load_data_option=shock
 service-port=7073
 host=probabilisticannotation
 proxytype=skip
+# docker-volume=/data:/data
 
 [genome_annotation]
 kmer_v2_data_directory=/data/Data.6
@@ -428,7 +431,7 @@ proxytype=skip
 giturl=https://github.com/kbase/genome_comparison
 thread.count=4
 temp.dir=/scratch/genome_comparison
-blast.dir=/kb/deploymengenome_comparison/blast/linux
+blast.dir=/kb/deployment/services/genome_comparison/blast/linux
 ws.url=http://public.hostname.org:8080/services/ws/
 ujs.url=http://public.hostname.org:8080/services/userandjobstate/
 service-port=7123
@@ -436,8 +439,8 @@ host=genomecomparison
 proxytype=skip
 
 [KBaseProteinStructure]
-md5pdbmapfile=/kb/deploymenprotein_structure_service/pdb/pdb.md5.tab
-blastdb=/kb/deploymenprotein_structure_service/pdb/pdb_md5_prot
+md5pdbmapfile=/kb/deployment/services/protein_structure_service/pdb/pdb.md5.tab
+blastdb=/kb/deployment/services/protein_structure_service/pdb/pdb_md5_prot
 giturl=https://github.com/kbase/protein_structure_service
 service-port=7088
 host=KBaseProteinStructure
@@ -449,7 +452,7 @@ giturl=https://github.com/kbase/bootstrap
 
 [ui-common]
 type=lib
-git-branch=deploy
+git-branch=staging
 
 [jars]
 type=lib
@@ -474,6 +477,9 @@ type=lib
 
 [kb_model_seed]
 type=lib
+# Used to build model seed with local glpk
+glpklib="-L/kb/runtime/lib -lglpk -Wl,-rpath=/kb/runtime/lib"
+inc=-I/kb/runtime/include/
 
 [strep_repeats]
 type=lib
@@ -535,14 +541,14 @@ mem=20g
 cores=4
 host=search
 service-port=7078
-config_path=/kb/deploymensearch/config
+config_path=/kb/deployment/services/search/config
 solr_url=http://localhost:7077/
 solr_auth_required=False
 solr_user=admin
 solr_pass=xxxxxxxx
 log_level=INFO
 log_syslog=True
-log_file=/kb/deploymensearch/search_service.log
+log_file=/kb/deployment/services/search/search_service.log
 proxytype=skip
 
 
@@ -677,7 +683,7 @@ ujs_service_url=http://public.hostname.org:8080/services/userandjobstate/
 workspace_service_url=http://public.hostname.org:8080/services/ws/
 shock_service_url=http://public.hostname.org:8080/services/shock-api/
 handle_service_url=http://public.hostname.org:8080/services/handleservice/
-fba_service_url=http://public.hostname.org:8080/services/fba/
+fba_service_url=http://public.hostname.org:8080/services/KBaseFBAModeling/
 # top level directory to store files for tasks
 working_directory=/mnt/transform_working
 # where to find the plugin config files
