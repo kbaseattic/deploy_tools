@@ -190,7 +190,7 @@ shock-user=kbaseuserid
 #Workspace seems to have a problem with this.
 #shock-url=http://public.hostname.org:8080/services/shock-api/
 shock-url=http://shock-api:7044/
-docker-links=mongo:mongo,proxy_shock-api:shock-api
+docker-links=mongo:mongo
 
 [translation]
 giturl=https://github.com/kbase/translation

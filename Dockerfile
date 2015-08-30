@@ -88,8 +88,10 @@ ONBUILD ADD ssl /root/dt/ssl
 # Add the ssl certs into the certificate tree
 ONBUILD RUN cat ssl/proxy.crt  >> /etc/ssl/certs/ca-certificates.crt && \
     cat ssl/proxy.crt > /etc/ssl/certs/`openssl x509 -noout -hash -in ssl/proxy.crt`.0 && \
+    cat ssl/proxy.crt  >> /usr/local/lib/python2.7/dist-packages/requests/cacert.pem && \
     cat ssl/narrative.crt  >> /etc/ssl/certs/ca-certificates.crt && \
     cat ssl/narrative.crt > /etc/ssl/certs/`openssl x509 -noout -hash -in ssl/narrative.crt`.0
+
 
 # This run command does several things including:
 # - Changing the memory size for the workspace
@@ -117,6 +119,7 @@ ONBUILD RUN sed -i 's/start_service &/start_service/' /root/dt/perl/KBDeploy.pm
 
 # Fix up URLs in clients
 ONBUILD RUN PUBLIC=$(grep baseurl= cluster.ini|sed 's/baseurl=//'|sed 's/:.*//') && \
+         sed -i "s|api-url=$|api-url=http://$PUBLIC:8080/services/shock-api|" /kb/deployment//services/shock_service/conf/shock.cfg  && \
          sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/biokbase/*/Client.py && \
          sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/Bio/KBase/*/Client.pm && \
          sed -i "s|public.hostname.org|$PUBLIC|" /kb/deployment/lib/javascript/*/Client.js
