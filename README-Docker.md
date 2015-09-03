@@ -26,7 +26,7 @@ These steps are done by the bootstrap.  Advanced users may need to run some step
 
 Make sure kbase/rtmin is available. This is provide by a branch in the bootstrap repo.
 
-    docker build -t kbase/deplbase:1.0 .
+    docker build -t kbase/deplbase:latest .
     docker build -t kbase/depl:1.0 -f Dockerfile.configure .
     ./scripts/build_narrative
 
@@ -74,7 +74,7 @@ There is a helper script to start a client container.  It will run as your user 
 
 Create a Dockerfile similar to this...
 
-    FROM kbase/deplbase:1.0
+    FROM kbase/deplbase:latest
     MAINTAINER Pat Smith psmith@mail.org
 
 Build the image and tag it.  You should probably use a tag different from the default.
@@ -132,5 +132,4 @@ Shock:
 
 Web Proxy:
 
-    docker exec deploytools_www_1 cat /var/log/nginx/error.log^C
-
+    docker exec deploytools_www_1 cat /var/log/nginx/error.log
