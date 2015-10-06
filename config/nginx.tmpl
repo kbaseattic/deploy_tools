@@ -7,7 +7,51 @@ server {
 	index index.html index.htm;
 
 	# Make site accessible from http://localhost/
-	server_name localhost;
+	server_name localhost proda-www kbase.us www.kbase.us;
+	
+	#Begin manual modification
+        # added kkeller 4sep2015
+        # see https://atlassian.kbase.us/browse/KBASE-2423
+        # commented back out 5sep, reported 413 errors
+#       client_max_body_size       10m;
+        location / {
+                proxy_pass http://198.128.58.54/;
+#                proxy_pass http://standby-internal.kbase.us;
+                #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                #proxy_set_header X-Real-IP $remote_addr;
+                #proxy_set_header Host prod1-internal.kbase.us;
+                #proxy_set_header X-Forwarded-Host $http_host;
+                #proxy_set_header X-Forwarded-Port $server_port;
+                #proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        location /internal/aweclient_status {
+                proxy_pass http://proda05/ ; #UPDATE!
+        }
+        location /internal/status/ {
+             root /kb/deployment/www/;
+        }
+        location /internal/jenkins/ {
+                proxy_pass http://140.221.66.245:8080/ ;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            add_header Access-Control-Allow-Origin "*";
+        }
+        location /services/docs/invocation {
+            rewrite ^ http://kbase.us/iris;
+        }
+ location /servicelogs/ {
+           auth_basic            "Restricted";
+          auth_basic_user_file  htpasswd;
+            proxy_pass http://vadmin2.chicago.kbase.us:8000;
+        }
+
+ location /servicesNS/ {
+            proxy_pass https://vadmin2.chicago.kbase.us:8089;
+        }
+
+#End manual modification
 
         # %NARINCLUDE
         location /services {
@@ -52,7 +96,7 @@ server {
 #
 server {
 	listen 443;
-	server_name localhost;
+	server_name localhost proda-www kbase.us www.kbase.us;
 
 	ssl on;
 	ssl_certificate /etc/nginx/ssl/server.crt;
@@ -68,7 +112,46 @@ server {
         index index.html index.htm;
 
         # Make site accessible from http://localhost/
-        server_name localhost;
+        #server_name localhost;
+
+#Begin manual modification
+        location / {
+                proxy_pass http://198.128.58.54/;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host prod1-internal.kbase.us;
+                proxy_set_header X-Forwarded-Host $http_host;
+                proxy_set_header X-Forwarded-Port $server_port;
+                proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        location /internal/aweclient_status {
+                proxy_pass http://proda05/ ;#UPDATE!
+        }
+        location /internal/status/ {
+             root /kb/deployment/www/;
+        }
+        location /internal/jenkins/ {
+                proxy_pass http://140.221.66.245:8080/ ;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            add_header Access-Control-Allow-Origin "*";
+        }
+        location /services/docs/invocation {
+            rewrite ^ http://kbase.us/iris;
+        }
+ location /servicelogs/ {
+           auth_basic            "Restricted";
+          auth_basic_user_file  htpasswd;
+            proxy_pass http://vadmin2.chicago.kbase.us:8000;
+        }
+
+ location /servicesNS/ {
+            proxy_pass https://vadmin2.chicago.kbase.us:8089;
+        }
+
+#End manual modification
 
         # %NARINCLUDE
         location /services {
