@@ -5,6 +5,6 @@ if [ -z $MYSERVICES ] ; then
   docker run --rm -it --link mongo:mongo --entrypoint bash --env MYSERVICES=mongo --env PASSWD --volume `pwd`:/tmp/dt mongo:2.4 /tmp/dt/$0
 else
   cd /tmp 
-  curl ftp://dtn.chicago.kbase.us/mongo/workspace_types-20150714.tar.gz|tar xzf -
+  curl ftp://dtn.chicago.kbase.us/mongo/workspace_types-latest.tar.gz|tar xzf -
   mongorestore --host mongo --db wstypes ./workspace_types/
 fi
