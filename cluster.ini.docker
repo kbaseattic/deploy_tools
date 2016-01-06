@@ -96,8 +96,8 @@ api-url=http://public.hostname.org:8080/services/awe-api/
 admin-user=kbaseuserid
 urlname=awe-api
 docker-links=mongo:mongo
-deploy=jars,workspace_deluxe,cdmi_api,kbrest_common,typecomp,matR,translation,CompressionBasedDistance,trees,fbaModelServices,probabilistic_annotation,genome_annotation,genome_comparison,idserver,handle_service,ontology_service,kmer_annotation_figfam,meme,expression,transform,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,coexpression
-deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,genome_comparison,genome_annotation,kmer_annotation_figfam,expression,KBaseFBAModeling,idserver,ontology_service,probabilistic_annotation,cbd,coexpression,translation,trees,erdb_service,kmer_annotation_figfam,expression,genome_annotation,kb_model_seed
+deploy=jars,workspace_deluxe,cdmi_api,kbrest_common,typecomp,matR,translation,CompressionBasedDistance,trees,fbaModelServices,probabilistic_annotation,genome_annotation,genome_comparison,idserver,handle_service,ontology_service,kmer_annotation_figfam,meme,expression,transform,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile
+deploy-master=workspace_deluxe,kb_seed,handle_service,handle_mngr,awe_service,transform,shock_service,narrative_method_store,user_and_job_state,njs_wrapper,narrative_job_service,user_profile,genome_comparison,genome_annotation,kmer_annotation_figfam,expression,KBaseFBAModeling,idserver,ontology_service,probabilistic_annotation,cbd,translation,trees,erdb_service,kmer_annotation_figfam,expression,genome_annotation,kb_model_seed
 
 [aweworker]
 type=worker
@@ -417,15 +417,15 @@ proxytype=skip
 #host=changeme
 #proxytype=skip
 
-[CoExpression]
-host=CoExpression
-giturl=https://github.com/kbase/coexpression
-ujs_url=http://public.hostname.org:8080/services/userandjobstate/
-awe_url=http://public.hostname.org:8080/services/awe-api/
-shock_url=http://public.hostname.org:8080/services/shock-api/
-ws_url=http://public.hostname.org:8080/services/ws/
-service-port=7063
-proxytype=skip
+#[CoExpression]
+#host=CoExpression
+#giturl=https://github.com/kbase/coexpression
+#ujs_url=http://public.hostname.org:8080/services/userandjobstate/
+#awe_url=http://public.hostname.org:8080/services/awe-api/
+#shock_url=http://public.hostname.org:8080/services/shock-api/
+#ws_url=http://public.hostname.org:8080/services/ws/
+#service-port=7063
+#proxytype=skip
 
 [genome_comparison]
 giturl=https://github.com/kbase/genome_comparison
